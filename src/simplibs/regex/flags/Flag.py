@@ -43,7 +43,7 @@ _DESIGN_NOTES = """
 
 ## Why this is an Enum living outside the Regex hierarchy
 `re.DEBUG` and `re.NOFLAG` from the raw catalog are deliberately excluded
-— `DEBUG` has no inline form at all (konverzace 4), and `NOFLAG` is just
+— `DEBUG` has no inline form at all, and `NOFLAG` is just
 the value `0`, not a flag a caller would ever compose with others.
 Everything else maps 1:1 between its inline letter and its `re` module
 constant, which is exactly what `re_flag` exposes — one table, used both

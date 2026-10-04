@@ -2,12 +2,12 @@
 Tests for the Alternation container.
 """
 import pytest
-from simplibs.regex.base_class.Regex import Regex, _Precedence
+from simplibs.regex.base_class.Regex import Regex, Precedence
 from simplibs.regex.containers.Alternation import Alternation
 
 
 class DummyNode(Regex):
-    def __init__(self, pattern: str, precedence: _Precedence = _Precedence.ATOM, fixed_len: int | None = None):
+    def __init__(self, pattern: str, precedence: Precedence = Precedence.ATOM, fixed_len: int | None = None):
         self._pattern = pattern
         self._precedence = precedence
         self._fixed_len = fixed_len

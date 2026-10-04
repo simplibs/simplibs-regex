@@ -2,6 +2,7 @@
 Tests for the Conditional container.
 """
 import pytest
+from simplibs.exception import ValidationError
 from simplibs.regex.base_class.Regex import Regex
 from simplibs.regex.containers.Conditional import Conditional
 
@@ -27,16 +28,16 @@ def test_conditional_validation_id():
     # Invalid string identifier
     with pytest.raises(ValueError):
         Conditional("invalid-name!", yes)
-    # Invalid type
-    with pytest.raises(TypeError):
+    # Invalid type (caught by @validate_call as ValidationError)
+    with pytest.raises(ValidationError):
         Conditional(3.14, yes)  # type: ignore
 
 
 def test_conditional_validation_branches():
     """Verify validation of yes and no branches."""
-    with pytest.raises(TypeError):
+    with pytest.raises(ValidationError):
         Conditional(1, "not-regex")  # type: ignore
-    with pytest.raises(TypeError):
+    with pytest.raises(ValidationError):
         Conditional(1, DummyNode("a"), no="not-regex")  # type: ignore
 
 

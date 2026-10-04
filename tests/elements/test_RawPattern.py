@@ -12,13 +12,13 @@ def test_raw_pattern_basic() -> None:
 
 def test_raw_pattern_invalid_type() -> None:
     """Test that passing a non-string raises TypeError."""
-    with pytest.raises(TypeError, match="requires a str"):
+    with pytest.raises(TypeError, match="PARAM_INVALID_TYPE_ERROR"):
         RawPattern(123)  # type: ignore[arg-type]
 
 
 def test_raw_pattern_empty_string() -> None:
     """Test that passing an empty string raises ValueError."""
-    with pytest.raises(ValueError, match="requires a non-empty string"):
+    with pytest.raises(ValueError, match="RAW_PATTERN_EMPTY"):
         RawPattern("")
 
 

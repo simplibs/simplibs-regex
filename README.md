@@ -24,7 +24,7 @@ year = NAMED_GROUP(ONE_OR_MORE(DIGIT), "year")
 pattern = Literal("born:") + Literal(" ") + year
 
 compiled = RegexPattern(pattern)
-compiled.search("Born: 2026 in Prague").group("year")  # -> "2026"
+compiled.search("born: 2026 in Prague").group("year")  # -> "2026"
 ```
 
 > `simplibs-regex` builds directly on the same architectural pattern as
@@ -62,7 +62,8 @@ Lookaround(Literal("USD"), direction=BEHIND)           # -> "(?<=USD)"
 Invalid combinations are rejected the moment you try to build them — a
 variable-length lookbehind, a `Group` that tries to be both named and flag-scoped, a
 `CharacterClass` item that doesn't belong there — rather than compiling into
-something that only fails later, confusingly, inside `re.compile()`.
+something that only fails later, confusingly, inside `re.compile()`. Wrong argument types
+are rejected the same way, with a message that names the parameter and the expected type.
 
 ---
 
@@ -71,6 +72,9 @@ something that only fails later, confusingly, inside `re.compile()`.
 ```bash
 pip install simplibs-regex
 ```
+
+Requires Python 3.11+. Runtime dependency (installed automatically): the simplibs
+`exception` library (structured error messages).
 
 ---
 
@@ -94,7 +98,7 @@ from simplibs.regex.compiler import RegexPattern
 
 pattern = RegexPattern(phone)
 pattern.search("call +1-5551234")  # -> a re.Match object
-pattern.findall("+1-111 and +1-222")  # -> ["111", "222"]
+pattern.findall("+1-111 and +1-222")  # -> ["+1-111", "+1-222"]
 ```
 
 ### Level 3: Compose groups, quantifiers, and lookarounds together
@@ -118,16 +122,17 @@ pattern.search("Total: $42").group("amount")   # -> "42"
 src/simplibs/regex/
 ├── base_class/            ◄── Abstract base class Regex & precedence-aware rendering
 │   ├── Regex.py
-│   └── _Precedence.py
+│   └── enums/Precedence.py
 ├── compiler/              ◄── RegexPattern — the compiled, ready-to-use runtime wrapper
 ├── containers/            ◄── Nodes that combine other nodes (Sequence, Alternation,
 │                              Repeat, Group, Lookaround, Conditional)
 ├── elements/              ◄── Leaves of the tree (Literal, RawPattern, Anchor, AnyCharacter,
-│                              CharacterType, CharacterRange, CharacterClass, GroupReference, CharCode)
+│                              CharacterType, CharacterRange, CharacterClass, GroupReference, CharacterCode)
 ├── flags/                 ◄── The Flag enum (inline & compile-time regex flags)
-└── presets/               ◄── Ready-made instances & factory functions over containers/elements 
-                               (anchors, character_types, character_classes, literals, quantifiers, 
-                               groups, lookaround, any_character)
+├── presets/               ◄── Ready-made instances & factory functions over containers/elements 
+│                              (anchors, character_types, character_classes, literals, quantifiers, 
+│                              groups, lookaround, any_character)
+└── testing/               ◄── Test helper for pattern terms (assert_pattern) — imported explicitly
 ```
 
 ---
@@ -150,7 +155,7 @@ class Regex(ABC):
         """Return this node's match width if fixed, else None."""
         return None
 
-    def render(self, parent_precedence: "_Precedence") -> str:
+    def render(self, parent_precedence: "Precedence") -> str:
         """Render for embedding, wrapping in (?:...) exactly when needed."""
         ...
 
@@ -164,7 +169,7 @@ class Regex(ABC):
 
 ## 📖 Quick Reference
 
-### `containers/` — Combining nodes
+### `containers/` — Composing nodes
 
 | Class         | Description / Parameters                                                           |
 |---------------|------------------------------------------------------------------------------------|
@@ -189,7 +194,7 @@ class Regex(ABC):
 | `CharacterRange` | `a-z`-style ranges — only inside `CharacterClass`.               |
 | `CharacterClass` | `[...]` / `[^...]`.                                              |
 | `GroupReference` | Backreferences (`\1`, `(?P=name)`).                              |
-| `CharCode`       | Character-code escapes (`\xFF \uFFFF \Uhhhhhhhh \N{name} \ooo`). |
+| `CharacterCode`  | Character-code escapes (`\xFF \uFFFF \Uhhhhhhhh \N{name} \ooo`). |
 
 *\* `\z` requires Python 3.14+; see [README_REGEX_ELEMENTS](https://github.com/simplibs/simplibs-regex/blob/main/docs/README_REGEX_ELEMENTS.md#anchor).*
 
@@ -224,6 +229,25 @@ construction time, not deferred to `re.compile()`.
 * **`lookaround`**: `LOOKAHEAD`, `NEGATIVE_LOOKAHEAD`, `LOOKBEHIND`, `NEGATIVE_LOOKBEHIND`
 
 ➡️ [README_REGEX_PRESETS](https://github.com/simplibs/simplibs-regex/blob/main/docs/README_REGEX_PRESETS.md)
+
+---
+
+### `testing/` — Test helper for pattern terms
+
+`assert_pattern` — one call verifies the exact pattern string a term renders, the texts
+it must match and the texts it must not. Built for testing presets and for libraries
+built on top of this one (such as `simplibs-patterns`). Not imported by `simplibs.regex`
+itself; import it explicitly.
+
+```python
+from simplibs.regex.presets.character_types import DIGIT
+from simplibs.regex.testing import assert_pattern
+
+def test_digit(subtests):
+    assert_pattern(subtests, DIGIT, "\\d", matches=["5"], non_matches=["a", "55"])
+```
+
+➡️ [README_REGEX_TESTING](https://github.com/simplibs/simplibs-regex/blob/main/docs/README_REGEX_TESTING.md)
 
 ---
 

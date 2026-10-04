@@ -17,7 +17,7 @@ concrete regex construct itself; instead it provides four things every node need
 
 ```python
 from abc import ABC, abstractmethod
-from ._Precedence import _Precedence
+from .enums import Precedence
 
 class Regex(ABC):
     ...
@@ -46,7 +46,8 @@ rest of this interface for free.
 * [`compile`](#compile)
 * [`__add__` / `__radd__`](#__add__--__radd__)
 * [`__or__` / `__ror__`](#__or__--__ror__)
-* [The `_Precedence` enum](#the-_precedence-enum)
+* [The `Precedence` enum](#the-precedence-enum)
+* [`__repr__` and class-level markers](#__repr__-and-class-level-markers)
 
 [⬅️ Back to main README](../README.md#-the-regex-class)
 
@@ -100,8 +101,8 @@ lookbehind.
   (`Literal` returns `len(text)`, `Sequence` sums its children or bails to `None` on
   the first variable one, `Alternation` returns the shared length only if every
   branch agrees, `Repeat` only when `min == max`, `Group`/`Conditional` delegate or
-  compare branches, every zero-width node — `Anchor`, `Lookaround` itself,
-  `CharacterClass` — returns a constant).
+  compare branches, zero-width nodes — `Anchor`, `Lookaround` — return `0`,
+  single-character nodes — `CharacterType`, `CharacterClass` — return `1`).
 
 **Example usage:**
 ```python
@@ -131,7 +132,7 @@ Renders this node for embedding inside a parent whose own binding power is
 wrapping every container in the library relies on.
 
 **Parameters:**
-* `parent_precedence` (*_Precedence*): The precedence level the parent is rendering
+* `parent_precedence` (*Precedence*): The precedence level the parent is rendering
   its children at — almost always the parent's own `self._precedence` (`Sequence`,
   `Alternation`, `Repeat`), or the loosest level (`ALTERNATION`) for any node that
   already provides its own hard delimiters (`Group`, `Lookaround`, `Conditional`).
@@ -148,7 +149,7 @@ Sequence(Literal("a"), alt).to_pattern()   # -> "a(?:cat|dog)" — alt got wrapp
 
 **Under the hood:**
 ```python
-def render(self, parent_precedence: "_Precedence") -> str:
+def render(self, parent_precedence: "Precedence") -> str:
     fragment = self.to_pattern()
     if self._precedence < parent_precedence:
         return f"(?:{fragment})"
@@ -204,7 +205,7 @@ give identical source text completely different meanings).
 **Returns:**
 * `str`: This node's representation for use inside `[...]`. Defaults to
   `to_pattern()` — correct for any node whose escape syntax is genuinely identical
-  either side of a class (`CharacterType`, `CharCode`). Only `Literal` overrides this
+  either side of a class (`CharacterType`, `CharacterCode`). Only `Literal` overrides this
   (escaping just `] ^ - \`, a smaller set than the general-purpose `re.escape` it
   uses outside a class).
 
@@ -215,7 +216,7 @@ CharacterClass(Literal("]"), Literal("^")).to_pattern()   # -> "[\]\^]"
 
 Only ever called on nodes where `_usable_in_char_class` is `True` —
 `CharacterClass.__init__` is responsible for that check; this method itself does not
-re-validate it. See [`README_REGEX_ATOMS`](README_REGEX_ELEMENTS.md#characterclass) for
+re-validate it. See [`README_REGEX_ELEMENTS`](README_REGEX_ELEMENTS.md#characterclass) for
 the full item-restriction mechanism.
 
 [▲ Back to top](#-table-of-contents)
@@ -300,16 +301,38 @@ alternation is a direct analogue of logical OR.
 
 ---
 
-## The `_Precedence` enum
+### `__repr__` and class-level markers
+
+Two class attributes that subclasses may override, plus a debugging helper.
+
+* `_precedence` (*Precedence*, default `ATOM`): binding power of this node's own
+  top-level syntax, read by a parent's `render`. Overridden only by `Sequence`,
+  `Alternation` and `Repeat`.
+* `_usable_in_char_class` (*bool*, default `False`): `True` on nodes allowed as a
+  standalone item inside `CharacterClass` — `CharacterType`, `CharacterRange`,
+  `CharacterCode` and single-character `Literal`.
+* `_repeatable` (*bool*, default `True`): `False` on nodes a quantifier cannot follow 
+  directly — `Anchor`. `Repeat` rejects them at construction.
+* `__repr__`: `ClassName('<to_pattern()>')`.
+
+```python
+repr(Literal("abc"))   # -> "Literal('abc')"
+```
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+## The `Precedence` enum
 
 Four binding-power levels, loosest to tightest, used exclusively by `render`:
 
-| Level | Value | Example syntax |
-|---|---|---|
-| `ALTERNATION` | 0 | `A\|B` |
-| `SEQUENCE` | 1 | `AB` |
-| `REPEAT` | 2 | `A*`, `A{m,n}` |
-| `ATOM` | 3 | a single char, `Group(...)`, `CharacterClass`, `Lookaround`, `Anchor`, ... |
+| Level         | Value | Example syntax                                                             |
+|---------------|-------|----------------------------------------------------------------------------|
+| `ALTERNATION` | 0     | `A\|B`                                                                     |
+| `SEQUENCE`    | 1     | `AB`                                                                       |
+| `REPEAT`      | 2     | `A*`, `A{m,n}`                                                             |
+| `ATOM`        | 3     | a single char, `Group(...)`, `CharacterClass`, `Lookaround`, `Anchor`, ... |
 
 A child is wrapped exactly when its own precedence is strictly lower than the level
 its parent renders it at. `ATOM` is the ceiling — anything already self-delimiting

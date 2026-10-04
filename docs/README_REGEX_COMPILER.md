@@ -17,20 +17,24 @@ class RegexPattern:
 
 * [`__init__`](#__init__)
 * [`pattern_string`](#pattern_string)
+* [`compiled`](#compiled)
 * [`search` / `match` / `fullmatch`](#search--match--fullmatch)
 * [`findall` / `finditer`](#findall--finditer)
 * [`sub` / `subn` / `split`](#sub--subn--split)
 
-[⬅️ Back to main README](../README.md#-regexpattern)
+[⬅️ Back to main README](../README.md#compiler--compiled-runtime-wrapper)
 
 ---
 
 ### `__init__`
 
+Every argument is type-checked first; a wrong type raises a `ParamError` (`PARAM_INVALID_TYPE_ERROR`)
+before anything is compiled.
+
 **Parameters:**
 * `node` (*Regex*): The root of the composed tree.
-* `flags` (*frozenset[Flag]*, keyword-only, default `frozenset()`): Top-level flags —
-  see [`README_REGEX_FLAGS`](README_REGEX_FLAGS.md) for the full reference and
+* `flags` (*set[Flag] | frozenset[Flag]*, keyword-only, default `frozenset()`): Top-level flags,
+  stored as a `frozenset` — see [`README_REGEX_FLAGS`](README_REGEX_FLAGS.md) for the full reference and
   `Flag.LOCALE`'s restriction (rejected here too).
 * `description` (*str*, keyword-only, default `""`): Free-text metadata — never
   parsed or inspected internally, carried purely for the caller's benefit
@@ -52,8 +56,14 @@ EMAIL = RegexPattern(email_node, lazy=True)
 ```
 
 **Raises:**
-* `simplibs.exception.ValidationError` (`REGEX_INVALID_PATTERN_ERROR`): If the fully
-  rendered pattern string fails to compile — the one failure no single node's own
+* `simplibs.exception.ParamError` (`PARAM_INVALID_TYPE_ERROR`, wrapping `TypeError`): An argument
+  has the wrong type — `node` is not a `Regex`, `flags` is not a set of `Flag` members, `description`
+  is not a `str`, or `lazy` is not a `bool`.
+* `simplibs.exception.ParamError` (`INVALID_LOCALE_ERROR`, wrapping `ValueError`): `flags` contains
+  `Flag.LOCALE`, which cannot be used with a `str` pattern.
+* `simplibs.exception.ValidationError` (`INVALID_PATTERN_ERROR`): If the fully
+  rendered pattern string fails to compile (or the flags are incompatible, e.g. `ASCII` with
+  `UNICODE`) — the one failure no single node's own
   construction-time validation can catch in isolation, most commonly two
   `Group(name=...)` nodes sharing a name at different points in the same tree.
   Raised at construction time when `lazy=False` (the default), or on first use when
@@ -70,7 +80,7 @@ def _ensure_compiled(self) -> None:
         combined_flags |= flag.re_flag
     try:
         self._compiled = re.compile(pattern_string, combined_flags)
-    except re.error as err:
+    except (re.error, ValueError) as err:
         raise_invalid_pattern_error(self.node, pattern_string, err)
     self._pattern_string = pattern_string
 ```
@@ -91,8 +101,21 @@ successful compilation is always a cheap no-op.
 
 **Example usage:**
 ```python
-pattern.pattern_string   # -> "(?i:(?P<year>\d+))"
+pattern.pattern_string   # -> "(?P<year>\d+)"
 ```
+
+Top-level `flags` are passed to `re.compile`, never rendered into the string, so they do not
+appear here.
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
+### `compiled`
+
+**Property.** The underlying `re.Pattern` — compiled on first access when `lazy=True`, already
+compiled otherwise. Use it for anything `RegexPattern` does not delegate (`.groupindex`,
+`.flags`, `pos`/`endpos` on `findall`, ...).
 
 [▲ Back to top](#-table-of-contents)
 
@@ -149,11 +172,11 @@ pattern.findall("born:1999 born:2000")   # -> ["1999", "2000"]
 
 **Example usage:**
 ```python
-pattern.sub("[REDACTED]", "born: 2026")   # -> "[REDACTED]"
+pattern.sub("[REDACTED]", "born: 2026")   # -> "born: [REDACTED]"
 ```
 
 [▲ Back to top](#-table-of-contents)
 
 ---
 
-[⬅️ Back to main README](../README.md#-regexpattern)
+[⬅️ Back to main README](../README.md#compiler--compiled-runtime-wrapper)

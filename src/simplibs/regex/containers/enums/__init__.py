@@ -14,6 +14,6 @@ modes and lookaround inspection directions.
 
 | Component             | Type   | Description                                                                     |
 | :-------------------- | :----- | :------------------------------------------------------------------------------ |
-| `LookaroundDirection` | Enum   | Specifies whether a lookaround assertion inspects ahead or behind[cite: 9].     |
-| `RepeatMode`          | Enum   | Specifies the backtracking behavior of a quantifier (greedy, lazy, possessive)[cite: 10]. |
+| `LookaroundDirection` | Enum   | Specifies whether a lookaround assertion inspects ahead or behind.     |
+| `RepeatMode`          | Enum   | Specifies the backtracking behavior of a quantifier (greedy, lazy, possessive). |
 """

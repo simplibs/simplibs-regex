@@ -1,6 +1,6 @@
 from .AnchorKind import AnchorKind
 from .CharacterTypeKind import CharacterTypeKind
-from .CharCodeKind import CharCodeKind
+from .CharacterCodeKind import CharacterCodeKind
 
 
 _DESIGN_NOTES = """
@@ -17,5 +17,5 @@ for anchors, character types, and character codes.
 | :------------------ | :----- | :------------------------------------------------------------------------------ |
 | `AnchorKind`        | Enum   | Specifies the type of zero-width position assertion (`^`, `$`, `\\b`, etc.). |
 | `CharacterTypeKind` | Enum   | Specifies built-in Unicode character classes (`\\d`, `\\w`, `\\s`, etc.).    |
-| `CharCodeKind`      | Enum   | Specifies character-code escape syntaxes (`\\xFF`, `\\uFFFF`, etc.).          |
+| `CharacterCodeKind` | Enum   | Specifies character-code escape syntaxes (`\\xFF`, `\\uFFFF`, etc.).          |
 """

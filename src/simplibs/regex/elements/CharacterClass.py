@@ -3,9 +3,9 @@ from ..base_class import Regex
 from .Literal import Literal
 # Inners
 from ._validations import (
-    raise_char_class_empty_error,
-    raise_char_class_item_not_allowed_error,
-    raise_multi_char_literal_in_char_class_error,
+    raise_character_class_empty_error,
+    raise_character_class_item_not_allowed_error,
+    raise_multi_character_literal_in_char_class_error,
 )
 
 
@@ -19,7 +19,7 @@ class CharacterClass(Regex):
 
     Only accepts items where `_usable_in_char_class` is `True` — a
     single-character `Literal`, a `CharacterType` (`DIGIT`, `WORD`, ...),
-    a `CharacterRange`, or a `CharCode`. This is Point 4 enforced at
+    a `CharacterRange`, or a `CharacterCode`. This is enforced at
     construction time: escape semantics differ inside `[...]`, so only
     nodes that know how to render themselves correctly in that context
     (via `to_char_class_fragment`) are ever allowed in.
@@ -42,19 +42,23 @@ class CharacterClass(Regex):
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, *items: Regex, negate: bool = False) -> None:
+    def __init__(
+        self,
+        *items: Regex,
+        negate: bool = False
+    ) -> None:
 
         # 1. Parameter validation — at least one item
         if not items:
-            raise_char_class_empty_error()
+            raise_character_class_empty_error()
 
         # 2. Parameter validation — every item must be a Regex node
-        #    explicitly opted into character-class usage (Point 4).
+        #    explicitly opted into character-class usage.
         for item in items:
             if not isinstance(item, Regex) or not item._usable_in_char_class:
-                raise_char_class_item_not_allowed_error(item)
+                raise_character_class_item_not_allowed_error(item)
             if isinstance(item, Literal) and len(item.text) != 1:
-                raise_multi_char_literal_in_char_class_error(item.text)
+                raise_multi_character_literal_in_char_class_error(item.text)
 
         # 3. Parameter assignment
         self.items: tuple[Regex, ...] = items
@@ -66,7 +70,7 @@ class CharacterClass(Regex):
     def to_pattern(self) -> str:
 
         # 1. Every item renders via its character-class-specific
-        #    fragment method (Point 4), never via to_pattern() directly —
+        #    fragment method, never via to_pattern() directly —
         #    that is exactly the distinction to_char_class_fragment
         #    exists to make.
         content = "".join(item.to_char_class_fragment() for item in self.items)
@@ -74,7 +78,7 @@ class CharacterClass(Regex):
         return f"{prefix}{content}]"
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -85,10 +89,10 @@ class CharacterClass(Regex):
 
 
 _DESIGN_NOTES = """
-# CharacterClass — Point 4 Enforced at Construction Time
+# CharacterClass — Enforced at Construction Time
 
 ## Where the actual validation lives
-`__init__` is the single enforcement point for Point 4: every item must
+`__init__` is the single enforcement point: every item must
 be a `Regex` instance with `_usable_in_char_class = True`, checked via
 `isinstance` + attribute check — deliberately the same procedural-check
 shape `Rule.__and__` already uses for `__not_rule__`, as flagged back in
@@ -102,7 +106,7 @@ to tell the two apart.
 
 ## Why rendering calls `to_char_class_fragment`, never `to_pattern`
 This is the concrete payoff of the hook added to `Regex`/`Literal`
-earlier: `CharacterType`/`CharacterRange`/`CharCode` items render
+earlier: `CharacterType`/`CharacterRange`/`CharacterCode` items render
 identically either way (their `to_char_class_fragment` just delegates
 to `to_pattern` via the base class default), but a `Literal` item
 renders through its OWN override, which escapes only `] ^ - \\` instead
@@ -110,8 +114,7 @@ of the full `re.escape` set `Literal.to_pattern` uses outside a class.
 Calling `to_pattern()` here by mistake would still often produce a
 technically-valid class (over-escaping inside `[...]` is harmless), but
 would violate the design intent of having each context use its own
-correct, minimal escaping — and would silently paper over exactly the
-kind of context-confusion Point 4 exists to catch.
+correct, minimal escaping.
 
 ## Why `fixed_length` is unconditionally 1
 Same shape of reasoning as `Anchor.fixed_length` being unconditionally

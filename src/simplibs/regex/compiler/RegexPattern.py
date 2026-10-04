@@ -1,14 +1,13 @@
 import re
 from typing import Any, Iterator
-
 # Outers
 from ..base_class import Regex
 from ..flags.Flag import Flag
 # Inners
 from ._validations import (
-    raise_regex_pattern_invalid_node_error,
-    raise_regex_pattern_invalid_flags_error,
     raise_invalid_pattern_error,
+    raise_invalid_locale_error,
+    raise_param_invalid_type_error
 )
 
 
@@ -37,22 +36,28 @@ class RegexPattern:
         self,
         node: Regex,
         *,
-        flags: frozenset[Flag] = frozenset(),
+        flags: set[Flag] | frozenset[Flag] = frozenset(),
         description: str = "",
         lazy: bool = False,
     ) -> None:
 
-        # 1. Parameter validation — node
+        # 1. Parameter validation — types
         if not isinstance(node, Regex):
-            raise_regex_pattern_invalid_node_error(node)
+            raise_param_invalid_type_error("node", node)
+        if not isinstance(flags, (set, frozenset)) or not all(isinstance(f, Flag) for f in flags):
+            raise_param_invalid_type_error("flags", flags)
+        if not isinstance(description, str):
+            raise_param_invalid_type_error("description", description)
+        if not isinstance(lazy, bool):
+            raise_param_invalid_type_error("lazy", lazy)
 
-        # 2. Parameter validation — flags
-        if not isinstance(flags, frozenset) or not all(isinstance(f, Flag) for f in flags):
-            raise_regex_pattern_invalid_flags_error(flags)
+        # 2. Parameter validation — LOCALE cannot be used with str patterns
+        if Flag.LOCALE in flags:
+            raise_invalid_locale_error(flags)
 
         # 3. Parameter assignment
         self.node = node
-        self.flags = flags
+        self.flags = frozenset(flags)
         self.description = description
         self.lazy = lazy
         self._pattern_string: str | None = None
@@ -81,10 +86,12 @@ class RegexPattern:
         for flag in self.flags:
             combined_flags |= flag.re_flag
 
-        # 4. Compile the pattern, wrapping any re.error into structured diagnostic
+        # 4. Compile the pattern, wrapping any compile failure into a structured
+        #    diagnostic. `re.compile` raises ValueError (not re.error) for
+        #    incompatible flags such as ASCII together with UNICODE.
         try:
             self._compiled = re.compile(pattern_string, combined_flags)
-        except re.error as err:
+        except (re.error, ValueError) as err:
             raise_invalid_pattern_error(self.node, pattern_string, err)
 
         # 5. Cache the pattern string
@@ -198,7 +205,7 @@ either way.
 ## Why the invalid-pattern error is wrapped here, not left as bare re.error
 Every OTHER construction-time failure in this library — a variable-
 length lookbehind, an invalid flag combination, an out-of-range
-CharCode — is caught by the specific node that owns that constraint,
+CharacterCode — is caught by the specific node that owns that constraint,
 with a message naming exactly what's wrong. A genuinely cross-tree
 conflict (two `Group(name=...)` nodes sharing a name at different
 points in the tree) is structurally impossible for any single node to

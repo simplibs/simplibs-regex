@@ -13,12 +13,13 @@ from .compiler.RegexPattern import RegexPattern
 # ======================================================================
 from .elements.Anchor import Anchor
 from .elements.enums.AnchorKind import AnchorKind
+from .elements.AnyCharacter import AnyCharacter
 from .elements.CharacterClass import CharacterClass
 from .elements.CharacterRange import CharacterRange
 from .elements.CharacterType import CharacterType
 from .elements.enums.CharacterTypeKind import CharacterTypeKind
-from .elements.CharCode import CharCode
-from .elements.enums.CharCodeKind import CharCodeKind
+from .elements.CharacterCode import CharacterCode
+from .elements.enums.CharacterCodeKind import CharacterCodeKind
 from .elements.GroupReference import GroupReference
 from .elements.Literal import Literal
 from .elements.RawPattern import RawPattern
@@ -51,6 +52,11 @@ from .presets.anchors.START_STRING import START_STRING
 from .presets.anchors.WORD_BOUNDARY import WORD_BOUNDARY
 
 # ======================================================================
+# Presets (Any character)
+# ======================================================================
+from .presets.any_character.ANY import ANY
+
+# ======================================================================
 # Presets (Character Types)
 # ======================================================================
 from .presets.character_types.DIGIT import DIGIT
@@ -61,11 +67,23 @@ from .presets.character_types.WHITESPACE import WHITESPACE
 from .presets.character_types.WORD import WORD
 
 # ======================================================================
+# Presets (Character Classes)
+# ======================================================================
+from .presets.character_classes.ALPHANUMERIC import ALPHANUMERIC
+from .presets.character_classes.HEX_DIGIT import HEX_DIGIT
+from .presets.character_classes.LETTER import LETTER
+from .presets.character_classes.LOWERCASE_LETTER import LOWERCASE_LETTER
+from .presets.character_classes.UPPERCASE_LETTER import UPPERCASE_LETTER
+
+# ======================================================================
 # Presets (Groups)
 # ======================================================================
 from .presets.groups.ATOMIC_GROUP import ATOMIC_GROUP
+from .presets.groups.CASE_INSENSITIVE import CASE_INSENSITIVE
 from .presets.groups.NAMED_GROUP import NAMED_GROUP
 from .presets.groups.NON_CAPTURING import NON_CAPTURING
+from .presets.groups.VERBOSE_GROUP import VERBOSE_GROUP
+from .presets.groups.WITH_FLAGS import WITH_FLAGS
 
 # ======================================================================
 # Presets (Lookaround)
@@ -74,6 +92,17 @@ from .presets.lookaround.LOOKAHEAD import LOOKAHEAD
 from .presets.lookaround.LOOKBEHIND import LOOKBEHIND
 from .presets.lookaround.NEGATIVE_LOOKAHEAD import NEGATIVE_LOOKAHEAD
 from .presets.lookaround.NEGATIVE_LOOKBEHIND import NEGATIVE_LOOKBEHIND
+
+# ======================================================================
+# Presets (Literals)
+# ======================================================================
+from .presets.literals.BACKSLASH_CHAR import BACKSLASH_CHAR
+from .presets.literals.BELL import BELL
+from .presets.literals.CARRIAGE_RETURN import CARRIAGE_RETURN
+from .presets.literals.FORM_FEED import FORM_FEED
+from .presets.literals.NEWLINE import NEWLINE
+from .presets.literals.TAB import TAB
+from .presets.literals.VERTICAL_TAB import VERTICAL_TAB
 
 # ======================================================================
 # Presets (Quantifiers)
@@ -94,12 +123,13 @@ __all__ = [
     # Elements & Enums
     "Anchor",
     "AnchorKind",
+    "AnyCharacter",
     "CharacterClass",
     "CharacterRange",
     "CharacterType",
     "CharacterTypeKind",
-    "CharCode",
-    "CharCodeKind",
+    "CharacterCode",
+    "CharacterCodeKind",
     "GroupReference",
     "Literal",
     "RawPattern",
@@ -121,6 +151,8 @@ __all__ = [
     "START",
     "START_STRING",
     "WORD_BOUNDARY",
+    # Any character
+    "ANY",
     # Presets - Character Types
     "DIGIT",
     "NON_DIGIT",
@@ -128,16 +160,33 @@ __all__ = [
     "NON_WORD",
     "WHITESPACE",
     "WORD",
+    # Presets - Character Classes
+    "ALPHANUMERIC",
+    "HEX_DIGIT",
+    "LETTER",
+    "LOWERCASE_LETTER",
+    "UPPERCASE_LETTER",
     # Presets - Groups
     "ATOMIC_GROUP",
+    "CASE_INSENSITIVE",
     "NAMED_GROUP",
     "NON_CAPTURING",
+    "VERBOSE_GROUP",
+    "WITH_FLAGS",
     # Presets - Lookaround
     "LOOKAHEAD",
     "LOOKBEHIND",
     "NEGATIVE_LOOKAHEAD",
     "NEGATIVE_LOOKBEHIND",
-    # Presets - Quantifiers",
+    # Presets - Literals
+    "BACKSLASH_CHAR",
+    "BELL",
+    "CARRIAGE_RETURN",
+    "FORM_FEED",
+    "NEWLINE",
+    "TAB",
+    "VERTICAL_TAB",
+    # Presets - Quantifiers
     "AT_LEAST",
     "BETWEEN",
     "EXACTLY",
@@ -151,11 +200,11 @@ _DESIGN_NOTES = """
 # Simplibs Regex Library — Main Package Root
 
 ## Purpose
-The `simplibs-regex` root package provides a clean, expressive, 
-and type-safe Domain Specific Language (DSL) for constructing, 
-composing, and compiling regular expressions in Python. 
-It decouples primitive AST nodes from structural containers 
-and ergonomic presets, ensuring robust IDE support 
+The `simplibs-regex` root package provides a clean, expressive,
+and type-safe Domain Specific Language (DSL) for constructing,
+composing, and compiling regular expressions in Python.
+It decouples primitive AST nodes from structural containers
+and ergonomic presets, ensuring robust IDE support
 and fail-fast validation.
 
 ## Core Architecture & Root Packages Registry
@@ -167,5 +216,5 @@ and fail-fast validation.
 | `elements`           | Atomic AST Nodes | Foundational building blocks like literals, anchors, character classes, and codes.  |
 | `containers`         | Higher-Order AST | Structural combinators like sequences, alternations, groups, and quantifiers.       |
 | `flags`              | Configuration    | Regular expression compilation flags (`Flag`).                                      |
-| `presets`            | DSL Shortcuts    | Ready-to-use syntactic helpers and atomic aliases for clean expression building.    |
+| `presets`             | DSL Shortcuts    | Ready-to-use syntactic helpers and atomic aliases for clean expression building.    |
 """

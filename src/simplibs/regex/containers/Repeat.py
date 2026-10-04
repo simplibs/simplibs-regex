@@ -1,13 +1,12 @@
-from enum import Enum
 # Outers
-from ..base_class import Regex, _Precedence
+from ..base_class import Regex, Precedence
 # Inners
 from .enums import RepeatMode
 from ._validations import (
-    raise_repeat_inner_not_regex_error,
+    raise_repeat_inner_not_repeatable_error,
     raise_repeat_min_negative_error,
     raise_repeat_max_less_than_min_error,
-    raise_repeat_invalid_mode_error,
+    raise_param_invalid_type_error
 )
 
 
@@ -16,7 +15,7 @@ class Repeat(Regex):
 
     Unifies all 14 Python `re` quantifier syntaxes — `*` `+` `?` `{n}`
     `{n,}` `{m,n}`, each in greedy/lazy/possessive form — into one
-    parameterized mechanism (Point 2).
+    parameterized mechanism.
 
     Pattern:
         A*, A+, A?, A{n}, A{n,}, A{m,n}  (+ trailing `?`/`+` for mode)
@@ -29,11 +28,12 @@ class Repeat(Regex):
 
     __slots__ = ("inner", "min", "max", "mode")
 
-    _precedence = _Precedence.REPEAT
+    _precedence = Precedence.REPEAT
 
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
+    # noinspection PyShadowingBuiltins
     def __init__(
         self,
         inner: Regex,
@@ -43,21 +43,29 @@ class Repeat(Regex):
         mode: RepeatMode = RepeatMode.GREEDY,
     ) -> None:
 
-        # 1. Parameter validation — inner
+        # 1. Parameter validation — types (bool is a subclass of int, so it is excluded explicitly)
         if not isinstance(inner, Regex):
-            raise_repeat_inner_not_regex_error(inner)
+            raise_param_invalid_type_error("inner", inner)
+        if isinstance(min, bool) or not isinstance(min, int):
+            raise_param_invalid_type_error("min", min)
+        if max is not None and (isinstance(max, bool) or not isinstance(max, int)):
+            raise_param_invalid_type_error("max", max)
+        if not isinstance(mode, RepeatMode):
+            raise_param_invalid_type_error("mode", mode)
 
-        # 2. Parameter validation — min/max
+        # 2. Parameter validation — `re` rejects a quantifier right after some nodes (an Anchor)
+        if not inner._repeatable:
+            raise_repeat_inner_not_repeatable_error(inner)
+
+        # 3. Parameter validation — minimum repetition count cannot be negative
         if min < 0:
             raise_repeat_min_negative_error(min)
+
+        # 4. Parameter validation — maximum repetition count cannot be less than minimum
         if max is not None and max < min:
             raise_repeat_max_less_than_min_error(min, max)
 
-        # 3. Parameter validation — mode
-        if not isinstance(mode, RepeatMode):
-            raise_repeat_invalid_mode_error(mode)
-
-        # 4. Parameter assignment
+        # 5. Parameter assignment
         self.inner = inner
         self.min = min
         self.max = max
@@ -68,13 +76,13 @@ class Repeat(Regex):
     # ----------------------------------------------------------------------
     def to_pattern(self) -> str:
 
-        # 1. Render the inner node against Repeat's own precedence — this
-        #    already wraps a Sequence/Alternation child via the ordinary
-        #    precedence comparison in `render`.
-        inner_pattern = self.inner.render(self._precedence)
+        # 1. A quantifier binds to exactly ONE preceding unit, so the inner
+        #    node is rendered at ATOM precedence: anything looser (Sequence,
+        #    Alternation, and another Repeat — `a*{3}` is invalid) gets
+        #    wrapped in (?:...) by `render`.
+        inner_pattern = self.inner.render(Precedence.ATOM)
 
-        # 2. Point 2 caveat (see Regex.needs_wrap_for_repeat / Literal's
-        #    own override): an ATOM-precedence child that is NOT a single
+        # 2. An ATOM-precedence child that is NOT a single
         #    quantifiable token (a multi-character Literal) still needs
         #    an explicit wrap, which the precedence comparison in step 1
         #    could not have added on its own.
@@ -113,7 +121,7 @@ class Repeat(Regex):
         return f"{{{self.min},{self.max}}}"
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -135,7 +143,7 @@ class Repeat(Regex):
 
 
 _DESIGN_NOTES = """
-# Repeat — Unified Quantifier Mechanism (Point 2)
+# Repeat — Unified Quantifier Mechanism
 
 ## The 14-to-1 collapse
 `*` `+` `?` `{n}` `{n,}` `{m,n}`, each in greedy/lazy/possessive form,
@@ -159,21 +167,31 @@ the nonsensical `lazy=True, possessive=True` (Python's `re` has no
 failed at all — deep inside `to_pattern`. A three-member `Enum` makes
 the invalid combination unrepresentable in the type system itself,
 consistent with `AnchorKind`/`CharacterTypeKind`'s own enum choice for
-the same reason (Point 2's own analysis favored `min/max/mode` kwargs
-over a template-generated class, and an enum for the one param that is
-genuinely a closed choice is the natural completion of that decision).
+the same reason.
 
 ## The `needs_wrap_for_repeat` check, concretely
 `Repeat(Literal("ab"), min=3, max=3).to_pattern()` must produce
 `(?:ab){3}`, not `ab{3}` (which would only repeat the final `b`).
-Step 1 (`inner.render(self._precedence)`) does NOT add this wrap on its
+Step 1 (`inner.render(Precedence.ATOM)`) does NOT add this wrap on its
 own — `Literal`'s `_precedence` is ATOM, which is not lower than
-REPEAT, so the ordinary precedence comparison in `Regex.render` sees no
+ATOM, so the ordinary precedence comparison in `Regex.render` sees no
 reason to wrap it. Step 2 is exactly the escape hatch `Regex.
 needs_wrap_for_repeat` exists for for this one case; every other
 ATOM-precedence node's default `False` means step 2 is a no-op for
 `Anchor`, `CharacterType`, `Group`, `CharacterClass`, `Lookaround`, and
 `GroupReference` alike.
+
+## Why the inner node renders at ATOM, not at REPEAT
+Rendering at Repeat's own level (REPEAT) would leave a nested `Repeat`
+unwrapped, producing `a*{3}` (or `a**`) — which `re` rejects as
+"multiple repeat". ATOM makes every non-single-token child
+(Sequence, Alternation, Repeat) wrap itself: `(?:a*){3}`.
+
+## Why an Anchor is refused as `inner`
+`^*`, `\\b?`, `\\A?` and `a\\Z*` fail in `re` with "nothing to repeat". The node
+flag `_repeatable` (False on `Anchor`) lets `Repeat` say so at construction time.
+Only the bare node is refused: a lookaround or a `Group` around an anchor is
+accepted by `re`, so they stay legal.
 
 ## `fixed_length` — the {0} special case
 `Repeat(anything, min=0, max=0)` always matches the empty string,

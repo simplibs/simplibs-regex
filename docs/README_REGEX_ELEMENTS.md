@@ -4,7 +4,7 @@ The `elements` package holds every node that represents a piece of matchable con
 directly, rather than combining other nodes — the leaves every `containers/` node
 eventually bottoms out at. Several unify a whole syntax family the same way
 `containers/`'s `Repeat`/`Group`/`Lookaround` do (`Anchor` covers 6+ position
-assertions, `CharacterType` covers 6 built-in classes, `CharCode` covers 5 escape
+assertions, `CharacterType` covers 6 built-in classes, `CharacterCode` covers 5 escape
 syntaxes) via one parameterized class plus a `Kind` enum.
 
 ```python
@@ -36,7 +36,7 @@ silently compiled into something misleading.
 * [`CharacterRange`](#characterrange)
 * [`CharacterClass`](#characterclass)
 * [`GroupReference`](#groupreference)
-* [`CharCode`](#charcode)
+* [`CharacterCode`](#charactercode)
 
 [⬅️ Back to main README](../README.md#elements--leaves-of-the-tree)
 
@@ -84,13 +84,13 @@ promises "this regex syntax, trust me" (verbatim).
 **Parameters:**
 * `text` (*str*): Raw regex syntax. Must be non-empty.
 
-**Usable in a `CharacterClass`:** never — the escaping rules inside `[...]` (Point 4)
+**Usable in a `CharacterClass`:** never — the escaping rules inside `[...]`
 cannot be verified for opaque text.
 
 **Example usage:**
 ```python
-Literal("b.c").to_pattern()       # -> "b\.c"   — doslovný text
-RawPattern("b.c").to_pattern()    # -> "b.c"    — "cokoliv" + "c", beze změny
+Literal("b.c").to_pattern()       # -> "b\.c"   — literal text
+RawPattern("b.c").to_pattern()    # -> "b.c"    — "any character" + "c", unchanged
 ```
 
 **Under the hood** *(`to_pattern`)*:
@@ -101,7 +101,7 @@ def to_pattern(self) -> str:
 
 Every capability defaults to the safest possible answer, since a `RawPattern`'s
 actual internal structure is unknowable without parsing it: `_precedence` is always
-`ALTERNATION` (always wrapped in `(?:...)` when embedded — safe even if the text
+`ALTERNATION` (wrapped in `(?:...)` inside a `Sequence` or `Repeat` — safe even if the text
 turns out not to need it), and `fixed_length()` is unconditionally `None` (so a
 `RawPattern` is always rejected inside `Lookaround(direction=BEHIND)`, rather than
 risking a wrong guess about its width).
@@ -136,6 +136,9 @@ A zero-width position assertion — matches a position, not a character.
 | `NON_WORD_BOUNDARY` | `\B`   | Not a word boundary                                     |
 
 **Usable in a `CharacterClass`:** never — an anchor has no meaning inside `[...]`.
+
+**Repeatable:** not directly — `re` rejects a quantifier right after an anchor (`^*`, `\b?`), so
+`Repeat(Anchor(...))` raises. Wrap it in a `Group` if you really need to.
 
 **Example usage:**
 ```python
@@ -239,7 +242,7 @@ Only accepts items where `_usable_in_char_class` is `True`.
 
 **Parameters:**
 * `*items` (*Regex*): One or more items — a single-character `Literal`, a
-  `CharacterType`, a `CharacterRange`, or a `CharCode`. At least one required.
+  `CharacterType`, a `CharacterRange`, or a `CharacterCode`. At least one required.
 * `negate` (*bool*, keyword-only, default `False`): `[^...]` instead of `[...]`.
 
 **Example usage:**
@@ -267,6 +270,9 @@ supports no nesting of one class inside another; `CharacterClass` simply never s
 its own `_usable_in_char_class = True`, so this is rejected by the ordinary item
 check with no special-case code. `fixed_length` is unconditionally `1`.
 
+Inside `[...]`, a `Literal` escapes `] ^ - \` plus `[ & ~ |` — `re` reserves `[[`, `&&`,
+`||`, `~~` and `--` for future set operations and warns about them.
+
 [▲ Back to top](#-table-of-contents)
 
 ---
@@ -276,7 +282,8 @@ check with no special-case code. `fixed_length` is unconditionally `1`.
 Backreference to a previously captured group, by number or name.
 
 **Parameters:**
-* `id_or_name` (*int | str*): A 1-based numeric id, or a group name.
+* `id_or_name` (*int | str*): A numeric id (`1`–`99`) or a group name. `re` reads
+  `\100` and above as an octal escape, so higher groups must be named.
 
 **Usable in a `CharacterClass`:** never — `\1` inside `[...]` is an octal escape, a
 genuinely different meaning from a backreference.
@@ -287,6 +294,10 @@ GroupReference(1)          # -> "\1"
 GroupReference("year")     # -> "(?P=year)"
 ```
 
+Embedded in a `Sequence` or `Repeat`, a numeric reference renders as `(?:\1)`, so a
+following digit can never merge into its number (`\1` + `0` would read as group 10).
+`to_pattern()` itself stays `\1`; named references need no wrapping.
+
 `fixed_length` is unconditionally `None` — a backreference's width depends entirely
 on what the referenced group actually captured at runtime, which a static tree has no
 way to know.
@@ -295,24 +306,24 @@ way to know.
 
 ---
 
-### `CharCode`
+### `CharacterCode`
 
 A single character specified by numeric code or Unicode name — unifies 5 escape
 syntaxes into one mechanism.
 
 **Parameters:**
-* `kind` (*CharCodeKind*): Which syntax.
+* `kind` (*CharacterCodeKind*): Which syntax.
 * `value` (*int | str*): The code (int, range-checked per `kind`) or name (str, for
   `NAMED`).
 
-**`CharCodeKind` values and ranges:**
+**`CharacterCodeKind` values and ranges:**
 
 | Member | Syntax | Value range |
 |---|---|---|
 | `HEX` | `\xFF` | `0x00`–`0xFF` |
 | `UNICODE_SHORT` | `\uFFFF` | `0x0000`–`0xFFFF` |
 | `UNICODE_LONG` | `\U0010FFFF` | `0x000000`–`0x10FFFF` |
-| `NAMED` | `\N{NAME}` | any non-empty `str` |
+| `NAMED` | `\N{NAME}` | an official Unicode character name (case-insensitive, aliases accepted) |
 | `OCTAL` | `\ooo` | `0`–`0o377` (verified against `re.compile`; `0o400`+ is rejected) |
 
 **Usable in a `CharacterClass`:** always — all five mean the same thing inside and
@@ -320,12 +331,15 @@ outside `[...]`.
 
 **Example usage:**
 ```python
-CharCode(CharCodeKind.HEX, 0x41)          # -> "\x41"  (matches "A")
-CharCode(CharCodeKind.NAMED, "BULLET")     # -> "\N{BULLET}"
+CharacterCode(CharacterCodeKind.HEX, 0x41)          # -> "\x41"  (matches "A")
+CharacterCode(CharacterCodeKind.NAMED, "BULLET")     # -> "\N{BULLET}"
 ```
 
 **Raises:**
-* `ValueError`: A `value` outside the kind's range (e.g. `CharCode(HEX, 300)`).
+* `ValueError`: A `value` outside the kind's range (e.g. `CharacterCode(HEX, 300)`).
+* `ValueError`: An unknown Unicode name for `NAMED` (e.g. `CharacterCode(CharacterCodeKind.NAMED, "NOPE")`),
+  or the name of a named sequence of several characters. Names are looked up exactly as `re` resolves
+  `\N{...}`, so the error comes at construction, not at compile time.
 
 Octal renders zero-padded to exactly 3 digits (`\001`, never bare `\1`) to avoid any
 ambiguity with backreferences. `fixed_length` is unconditionally `1`.

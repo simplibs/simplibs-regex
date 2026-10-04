@@ -14,7 +14,7 @@ class CharacterRange(Regex):
 
     Only ever legal as a standalone item inside a `CharacterClass` — a
     range has no standalone meaning outside `[...]`, unlike every other
-    `_usable_in_char_class` atom (`Literal`, `CharacterType`, `CharCode`),
+    `_usable_in_char_class` atom (`Literal`, `CharacterType`, `CharacterCode`),
     which all also make sense on their own. `to_pattern()` therefore
     deliberately raises rather than silently producing something
     meaningless.
@@ -30,18 +30,25 @@ class CharacterRange(Regex):
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, start: str, end: str) -> None:
+    def __init__(
+        self,
+        start: str,
+        end: str
+    ) -> None:
 
-        # 1. Parameter validation — both must be single characters[cite: 26]
-        for name, value in (("start", start), ("end", end)):
-            if not (isinstance(value, str) and len(value) == 1):
-                raise_character_range_invalid_boundary_error(name, value)
+        # 1. Parameter `start` validation — must be single-character string
+        if not isinstance(start, str) or len(start) != 1:
+            raise_character_range_invalid_boundary_error("start", start)
 
-        # 2. Parameter validation — start must not come after end[cite: 26]
+        # 2. Parameter `end` validation — must be single-character string
+        if not isinstance(end, str) or len(end) != 1:
+            raise_character_range_invalid_boundary_error("end", end)
+
+        # 3. Parameter validation — start must not come after end
         if ord(start) > ord(end):
             raise_character_range_start_after_end_error(start, end)
 
-        # 3. Parameter assignment
+        # 4. Parameter assignment
         self.start = start
         self.end = end
 
@@ -55,20 +62,28 @@ class CharacterRange(Regex):
 
         # 1. Escape start/end individually (only relevant for `]`/`^`
         #    landing at a range boundary, e.g. CharacterRange('[', ']')),
-        #    then join with the literal range dash[cite: 26].
+        #    then join with the literal range dash.
         return f"{escape_char_class_char(self.start)}-{escape_char_class_char(self.end)}"
 
+    def __repr__(self) -> str:
+
+        # 1. `to_pattern()` raises for a bare range, so the inherited
+        #    repr (which is built from the pattern) cannot be used —
+        #    it would crash debuggers and error messages.
+        return f"CharacterRange({self.start!r}, {self.end!r})"
+
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
         # 1. Meaningful only in the sense of "if this were ever queried" —
         #    a range always matches exactly one character, same as any
-        #    other CharacterClass item[cite: 26]. Included for consistency even
+        #    other CharacterClass item. Included for consistency even
         #    though a bare CharacterRange can never appear inside a
-        #    Lookaround directly[cite: 26].
+        #    Lookaround directly.
         return 1
+
 
 _DESIGN_NOTES = """
 # CharacterRange — Range-Only CharacterClass Item

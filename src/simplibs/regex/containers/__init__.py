@@ -22,9 +22,9 @@ group, or conditionally structure multiple regex nodes into complex patterns, al
 | `Conditional`         | Container Class  | Conditional matching based on group existence or check condition.               |
 | `Group`               | Container Class  | Grouping, capturing, non-capturing, or named sub-patterns (`(...)`).            |
 | `Lookaround`          | Container Class  | Zero-width positive/negative lookahead or lookbehind assertions.                |
-| `LookaroundDirection` | Enum             | Specifies whether a lookaround assertion inspects ahead or behind[cite: 9].     |
+| `LookaroundDirection` | Enum             | Specifies whether a lookaround assertion inspects ahead or behind.     |
 | `Repeat`              | Container Class  | Quantifies sub-patterns with specified min, max, and greediness modes.          |
-| `RepeatMode`          | Enum             | Specifies the backtracking behavior of a quantifier (greedy, lazy, possessive)[cite: 10]. |
+| `RepeatMode`          | Enum             | Specifies the backtracking behavior of a quantifier (greedy, lazy, possessive). |
 | `Sequence`            | Container Class  | Matches a sequential chain of sub-patterns in order (`abc`).                    |
 """
 

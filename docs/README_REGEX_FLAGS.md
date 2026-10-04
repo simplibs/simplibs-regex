@@ -21,7 +21,7 @@ class Flag(Enum):
 * [`Flag`](#flag)
 * [Restrictions](#restrictions)
 
-[⬅️ Back to main README](../README.md#flags--inline-regex-flags)
+[⬅️ Back to main README](../README.md#flags--inline--compile-time-flags)
 
 ---
 
@@ -59,7 +59,7 @@ others.
 
 ## Restrictions
 
-Two restrictions, both verified directly against `re.compile` and enforced at
+Four restrictions, both verified directly against `re.compile` and enforced at
 construction time by `Group` and `RegexPattern` alike — a caller never discovers
 either only later, inside `re.compile()`:
 
@@ -71,6 +71,8 @@ either only later, inside `re.compile()`:
   scoped `Group`'s `flags_off` — Python's `re` rejects `ASCII`/`LOCALE`/`UNICODE`
   there (`cannot turn off flags 'a', 'u' and 'L'`), since those three can only ever
   be turned ON.
+* **The same flag cannot be enabled and disabled simultaneously in the same group** ((?i-i:...)).
+* **`ASCII` and `UNICODE` cannot be enabled together.**
 
 ```python
 Group(DIGIT, capturing=False, flags={Flag.IGNORECASE}, flags_off={Flag.ASCII})
@@ -80,8 +82,11 @@ RegexPattern(pattern, flags=frozenset({Flag.LOCALE}))
 # -> raises: LOCALE cannot be used with a str pattern
 ```
 
+Combinations only `re.compile` can judge — such as `ASCII` together with `UNICODE` — are
+reported by `RegexPattern` as `INVALID_PATTERN_ERROR`.
+
 [▲ Back to top](#-table-of-contents)
 
 ---
 
-[⬅️ Back to main README](../README.md#flags--inline-regex-flags)
+[⬅️ Back to main README](../README.md#flags--inline--compile-time-flags)

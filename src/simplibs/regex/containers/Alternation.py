@@ -1,10 +1,8 @@
 # Outers
-from ..base_class import Regex, _Precedence
+from ..base_class import Regex, Precedence
 # Inners
-from ._validations import (
-    raise_requires_at_least_one_node_error,
-    raise_node_param_not_regex_error,
-)
+from ._helpers import flatten_nodes
+from ._validations import raise_no_nodes_error
 
 
 class Alternation(Regex):
@@ -20,29 +18,22 @@ class Alternation(Regex):
 
     __slots__ = ("nodes",)
 
-    _precedence = _Precedence.ALTERNATION
+    _precedence = Precedence.ALTERNATION
 
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, *nodes: Regex) -> None:
+    def __init__(
+        self,
+        *nodes: Regex
+    ) -> None:
 
         # 1. Parameter validation
         if not nodes:
-            raise_requires_at_least_one_node_error("Alternation")
+            raise_no_nodes_error("Alternation")
 
-        # 2. Flatten nested Alternation instances (e.g. from `a | b | c`
-        #    chaining) into a single flat node list, rather than nesting
-        #    Alternation(Alternation(...), ...)
-        flattened: list[Regex] = []
-        for node in nodes:
-            if not isinstance(node, Regex):
-                raise_node_param_not_regex_error("Alternation", node)
-            if type(node) is Alternation:
-                node: Alternation
-                flattened.extend(node.nodes)
-            else:
-                flattened.append(node)
+        # 2. Flatten nested Alternation instances
+        flattened = flatten_nodes(nodes, Alternation, "Alternation")
 
         # 3. Parameter assignment
         self.nodes: tuple[Regex, ...] = tuple(flattened)
@@ -59,7 +50,7 @@ class Alternation(Regex):
         return "|".join(node.render(self._precedence) for node in self.nodes)
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 

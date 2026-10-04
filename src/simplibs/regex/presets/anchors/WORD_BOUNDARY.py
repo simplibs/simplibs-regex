@@ -9,7 +9,8 @@ Init Params:
     (no parameters)
 
 Pattern:
-    Matches a zero-width position where a word character is not followed or preceded by another word-character (`\\b`).
+    Matches a zero-width position between a word character and a non-word
+    character, or at the edge of the string next to a word character (`\\b`).
 
 Example:
     WORD_BOUNDARY

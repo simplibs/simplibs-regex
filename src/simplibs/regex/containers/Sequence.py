@@ -1,10 +1,8 @@
 # Outers
-from ..base_class import Regex, _Precedence
+from ..base_class import Regex, Precedence
 # Inners
-from ._validations import (
-    raise_requires_at_least_one_node_error,
-    raise_node_param_not_regex_error,
-)
+from ._helpers import flatten_nodes
+from ._validations import raise_no_nodes_error
 
 
 class Sequence(Regex):
@@ -20,28 +18,22 @@ class Sequence(Regex):
 
     __slots__ = ("nodes",)
 
-    _precedence = _Precedence.SEQUENCE
+    _precedence = Precedence.SEQUENCE
 
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, *nodes: Regex) -> None:
+    def __init__(
+        self,
+        *nodes: Regex
+    ) -> None:
 
         # 1. Parameter validation
         if not nodes:
-            raise_requires_at_least_one_node_error("Sequence")
+            raise_no_nodes_error("Sequence")
 
-        # 2. Flatten nested Sequence instances (e.g. from `a + b + c` chaining)
-        #    into a single flat node list, rather than nesting
-        #    Sequence(Sequence(...), ...)
-        flattened: list[Regex] = []
-        for node in nodes:
-            if not isinstance(node, Regex):
-                raise_node_param_not_regex_error("Sequence", node)
-            if type(node) is Sequence:
-                flattened.extend(node.nodes)
-            else:
-                flattened.append(node)
+        # 2. Flatten nested Sequence instances
+        flattened = flatten_nodes(nodes, Sequence, "Sequence")
 
         # 3. Parameter assignment
         self.nodes: tuple[Regex, ...] = tuple(flattened)
@@ -57,7 +49,7 @@ class Sequence(Regex):
         return "".join(node.render(self._precedence) for node in self.nodes)
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -84,10 +76,7 @@ input, self-flattening via exact `type(node) is Sequence` check (not
 ## `to_pattern` delegates wrapping entirely to `render`
 `to_pattern` never decides on its own whether a child needs `(?:...)` —
 it always calls `node.render(self._precedence)`, and `Regex.render`
-(the single, shared implementation) makes that call. This is the
-concrete case Point 1 was designed for: an `Alternation` child renders
-wrapped, a `Literal` or `Group` child renders unwrapped, both through
-the exact same code path.
+(the single, shared implementation) makes that call. 
 
 ## `fixed_length` — straightforward sum, strict on unknowns
 Unlike `AllOf.is_valid` (which can short-circuit on the first failure),

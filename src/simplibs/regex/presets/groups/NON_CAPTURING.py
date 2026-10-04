@@ -10,7 +10,7 @@ def NON_CAPTURING(inner: Regex) -> Group:
         inner (Regex): The inner regex expression to group without capturing.
 
     Pattern:
-        A group that controls precedence or flags without saving the matched text (`(?:...)`).
+        A group that controls precedence without saving the matched text (`(?:...)`).
 
     Example:
         pattern = NON_CAPTURING(Sequence(Literal("a"), Literal("b")))

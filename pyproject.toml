@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplibs-regex"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lightweight, immutable regular expression helper library with lazy compilation and composable pattern utilities for the simplibs ecosystem."
 readme = "README.md"
 license = "MIT"
@@ -31,6 +31,7 @@ classifiers = [
 ]
 dependencies = [
     "simplibs-exception>=1.0.0",
+    "simplibs-validate>=0.2.0"
 ]
 
 [[project.authors]]

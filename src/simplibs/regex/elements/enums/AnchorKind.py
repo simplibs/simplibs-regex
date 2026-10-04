@@ -8,6 +8,7 @@ class AnchorKind(Enum):
     END = "$"               # end of string, or end of line under MULTILINE
     START_STRING = r"\A"    # start of the whole string, always
     END_STRING = r"\Z"      # end of the whole string, always
+    END_STRING_PY314 = r"\z"   # same meaning as END_STRING; Python 3.14+ only
     WORD_BOUNDARY = r"\b"
     NON_WORD_BOUNDARY = r"\B"
 
@@ -25,6 +26,7 @@ or word boundaries).
 - `END`: Matches the end of a line or string.
 - `START_STRING`: Matches the absolute start of the whole string.
 - `END_STRING`: Matches the absolute end of the whole string.
+- `END_STRING_PY314`: Same as `END_STRING` (`\\z`); exists on Python 3.14+ only.
 - `WORD_BOUNDARY`: Matches a word boundary.
 - `NON_WORD_BOUNDARY`: Matches a non-word boundary.
 """

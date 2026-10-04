@@ -18,3 +18,11 @@ def raise_group_atomic_and_flags_conflict_error() -> NoReturn:
         ),
         exception=ValueError,
     )
+
+
+_DESIGN_NOTES = """
+# raise_group_atomic_and_flags_conflict_error — Atomic and Flags Conflict Guard
+
+## Purpose
+Guards Group against combining atomic grouping with scoped flags, which Python regex syntax forbids.
+"""

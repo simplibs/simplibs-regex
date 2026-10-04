@@ -4,12 +4,12 @@ Tests for the abstract base class Regex.
 import pytest
 from abc import ABC
 from simplibs.regex.base_class.Regex import Regex
-from simplibs.regex.base_class._Precedence import _Precedence
+from simplibs.regex.base_class.enums.Precedence import Precedence
 
 
 class DummyRegex(Regex):
     """Concrete subclass of Regex for testing base class functionality."""
-    def __init__(self, pattern: str, precedence: _Precedence = _Precedence.ATOM, fixed_len: int | None = None, wrap_repeat: bool = False, usable_char_class: bool = False):
+    def __init__(self, pattern: str, precedence: Precedence = Precedence.ATOM, fixed_len: int | None = None, wrap_repeat: bool = False, usable_char_class: bool = False):
         self._pattern = pattern
         self._precedence = precedence
         self._fixed_len = fixed_len
@@ -35,7 +35,7 @@ def test_regex_is_abstract():
 def test_default_attributes():
     """Verify default class attributes on Regex subclasses."""
     node = DummyRegex("test")
-    assert node._precedence == _Precedence.ATOM
+    assert node._precedence == Precedence.ATOM
     assert node._usable_in_char_class is False
     assert node.fixed_length() is None
     assert node.needs_wrap_for_repeat() is False
@@ -43,16 +43,16 @@ def test_default_attributes():
 
 def test_render_no_wrap():
     """Verify render does not wrap when child precedence is greater than or equal to parent precedence."""
-    node = DummyRegex("abc", precedence=_Precedence.ATOM)
+    node = DummyRegex("abc", precedence=Precedence.ATOM)
     # Parent has SEQUENCE precedence (1), child has ATOM (3) -> 3 < 1 is False -> no wrap
-    assert node.render(_Precedence.SEQUENCE) == "abc"
+    assert node.render(Precedence.SEQUENCE) == "abc"
 
 
 def test_render_with_wrap():
     """Verify render wraps in (?:...) when child precedence is strictly lower than parent precedence."""
-    node = DummyRegex("a|b", precedence=_Precedence.ALTERNATION)
+    node = DummyRegex("a|b", precedence=Precedence.ALTERNATION)
     # Parent has SEQUENCE precedence (1), child has ALTERNATION (0) -> 0 < 1 is True -> wrap
-    assert node.render(_Precedence.SEQUENCE) == "(?:a|b)"
+    assert node.render(Precedence.SEQUENCE) == "(?:a|b)"
 
 
 def test_to_char_class_fragment_default():

@@ -18,3 +18,11 @@ def raise_group_name_and_flags_conflict_error() -> NoReturn:
         ),
         exception=ValueError,
     )
+
+
+_DESIGN_NOTES = """
+# raise_group_name_and_flags_conflict_error — Name and Flags Conflict Guard
+
+## Purpose
+Guards Group against combining a group name with scoped flags.
+"""

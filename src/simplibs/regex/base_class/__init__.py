@@ -1,4 +1,4 @@
-from ._Precedence import _Precedence
+from .enums import Precedence
 from .Regex import Regex
 
 
@@ -14,5 +14,5 @@ for the regex library, including operator overloading, precedence levels, and fr
 | Component     | Type             | Description                                                                        |
 | :------------ | :--------------- | :--------------------------------------------------------------------------------- |
 | `Regex`       | Abstract Class   | The root abstract class for all regex AST nodes, defining operators and hooks.     |
-| `_Precedence` | Internal Enum    | Precedence levels used to determine when parentheses are required during rendering.|
+| `Precedence` | Internal Enum    | Precedence levels used to determine when parentheses are required during rendering.|
 """

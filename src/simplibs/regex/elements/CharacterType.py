@@ -2,7 +2,7 @@
 from ..base_class import Regex
 # Inners
 from .enums import CharacterTypeKind
-from ._validations import raise_character_type_invalid_kind_error
+from ._validations import raise_param_invalid_type_error
 
 
 class CharacterType(Regex):
@@ -23,18 +23,23 @@ class CharacterType(Regex):
 
     __slots__ = ("kind",)
 
-    # Point 4 — one of the few node types whose meaning is IDENTICAL
-    # inside and outside a CharacterClass, so it is always a legal item[cite: 27].
+    # One of the few node types whose meaning is IDENTICAL
+    # inside and outside a CharacterClass, so it is always a legal item.
     _usable_in_char_class = True
 
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, kind: CharacterTypeKind) -> None:
+    def __init__(
+        self,
+        kind: CharacterTypeKind
+    ) -> None:
 
-        # 1. Parameter validation
+        # 1. Parameter validation — type
         if not isinstance(kind, CharacterTypeKind):
-            raise_character_type_invalid_kind_error(kind)
+            raise_param_invalid_type_error(
+                "kind", "a CharacterTypeKind member", kind, "CharacterTypeKind.DIGIT"
+            )
 
         # 2. Parameter assignment
         self.kind = kind
@@ -44,15 +49,15 @@ class CharacterType(Regex):
     # ----------------------------------------------------------------------
     def to_pattern(self) -> str:
 
-        # 1. Every CharacterTypeKind value IS its own regex fragment[cite: 27].
+        # 1. Every CharacterTypeKind value IS its own regex fragment.
         return self.kind.value
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
-        # 1. Every built-in character type matches exactly one character[cite: 27].
+        # 1. Every built-in character type matches exactly one character.
         return 1
 
 
@@ -65,7 +70,7 @@ the pattern used for `Anchor`. Presets (`DIGIT`, `NON_DIGIT`, `WORD`,
 ...) are plain instances in `presets/character_types.py`.
 
 ## Why this is the one atom type usable in a CharacterClass unchanged
-Point 4's whole premise — escape sequences meaning something different
+Whole premise — escape sequences meaning something different
 inside `[...]` than outside it — genuinely does NOT apply to
 `\\d \\D \\w \\W \\s \\S`: Python's `re` documentation is explicit that
 these six retain their outside-the-class meaning when placed inside one

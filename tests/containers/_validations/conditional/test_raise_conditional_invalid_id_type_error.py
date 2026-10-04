@@ -1,27 +1,48 @@
-"""
-Tests for raise_conditional_invalid_id_type_error.
-"""
 import pytest
+
+from simplibs.exception import ParamError
+from simplibs.exception.testing import assert_exception_function
 from simplibs.regex.containers._validations import (
     raise_conditional_invalid_id_type_error,
 )
-from simplibs.exception.exceptions import ParamError
-from simplibs.exception.testing import assert_exception_function
 
 
-@pytest.mark.parametrize("invalid_type", [1.5, None, object()])
-def test_raise_conditional_invalid_id_type_error(subtests, invalid_type):
-    """Verify that unsupported types for id_or_name raise a ParamError."""
+@pytest.mark.parametrize(
+    "invalid_id",
+    [
+        True,
+        False,
+        3.14,
+        None,
+        ["group1"],
+    ],
+)
+def test_raise_conditional_invalid_id_type_error_contract(
+    subtests,
+    invalid_id,
+) -> None:
+    """Verify that raise_conditional_invalid_id_type_error raises ParamError
+    wrapping TypeError when a conditional group reference has an invalid type."""
+
+    received_type = type(invalid_id).__name__
+
     assert_exception_function(
         subtests,
         raise_conditional_invalid_id_type_error,
-        invalid_params=(invalid_type,),
+        invalid_params=(invalid_id,),
         exception_type=ParamError,
-        value=type(invalid_type).__name__,
-        label="Conditional id_or_name",
-        expected="An int or str instance.",
-        problem="requires an int or str for `id_or_name`",
-        how_to_fix="Pass an integer group index or a string group name",
+        error_name="CONDITIONAL_INVALID_ID_TYPE_ERROR",
+        label="id_or_name",
+        expected="an integer (>= 1) or a string identifier",
+        value=invalid_id,
+        problem=(
+            f"Conditional group reference received an invalid type '{received_type}' with value {invalid_id!r}.",
+            "Booleans and other non-int/non-str types are not valid group references.",
+        ),
+        how_to_fix=(
+            "Provide either a positive integer group number or a string group identifier.",
+            "Example: Conditional(1, Literal('yes'), Literal('no')) or Conditional('group_name', Literal('yes'))",
+        ),
         exception=TypeError,
-        verbose=False
+        verbose=False,
     )

@@ -18,3 +18,11 @@ def raise_group_flags_off_without_flags_error() -> NoReturn:
         ),
         exception=ValueError,
     )
+
+
+_DESIGN_NOTES = """
+# raise_group_flags_off_without_flags_error — Flags-Off Without Flags Guard
+
+## Purpose
+Ensures call-site readability by requiring explicit `flags` when `flags_off` is specified.
+"""

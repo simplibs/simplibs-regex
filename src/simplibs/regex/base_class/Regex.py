@@ -1,7 +1,7 @@
+import re
 from abc import ABC, abstractmethod
-from typing import Any
 # Inners
-from ._Precedence import _Precedence
+from .enums import Precedence
 
 
 class Regex(ABC):
@@ -10,29 +10,38 @@ class Regex(ABC):
     Every concrete node (container or atom) inherits from this class and
     implements `to_pattern` and, where a fixed length is knowable,
     `fixed_length`. The class provides precedence-aware rendering via
-    `render` (Point 1), fixed-length introspection for lookbehind
-    validation (Point 3), a character-class-item opt-in marker (Point 4),
-    and `+`/`|` composition operators mirroring `Rule`'s `&`/`|`.
+    `render`, fixed-length introspection for lookbehind validation, a
+    character-class-item opt-in marker, and the `+` (Sequence) and `|`
+    (Alternation) composition operators.
     """
 
     # ----------------------------------------------------------------------
     # Class-level contract every subclass declares
     # ----------------------------------------------------------------------
 
-    # Point 1 — binding power of THIS node's own top-level syntax, used by
+    # Binding power of THIS node's own top-level syntax, used by
     # a parent's `render()` to decide whether this node needs wrapping.
-    # Defaults to ATOM (self-delimiting) — the loosest-binding containers
-    # (Sequence, Alternation) explicitly override this to a lower value.
-    _precedence: _Precedence = _Precedence.ATOM
+    # Defaults to ATOM (self-delimiting) — Sequence, Alternation and Repeat
+    # explicitly override this to a lower value.
+    _precedence: Precedence = Precedence.ATOM
 
-    # Point 4 — opt-in marker: True on nodes that are legal standalone
+    # True on nodes that are legal standalone
     # items inside a CharacterClass (`[...]`), where escape semantics
     # differ from the rest of the pattern (see CharacterClass's own
     # validation, which checks this flag rather than a broad isinstance
     # check against the whole Regex hierarchy). Defaults to False; only
-    # CharacterType, CharacterRange, CharCode and single-character
+    # CharacterType, CharacterRange, CharacterCode and single-character
     # Literal override it to True.
     _usable_in_char_class: bool = False
+
+    # False on nodes that `re` refuses to quantify directly: a quantifier
+    # placed straight after them fails with "nothing to repeat" (`^*`,
+    # `\b?`). `Repeat` reads this flag in its constructor and rejects such a
+    # node up front, instead of letting the error surface later in
+    # `re.compile()`. Defaults to True; only Anchor overrides it to False.
+    # The flag describes the BARE node: an anchor wrapped in a Group, or a
+    # Lookaround, is accepted by `re` and therefore stays True.
+    _repeatable: bool = True
 
     # ----------------------------------------------------------------------
     # 1) Abstract Interface (mandatory for subclasses)
@@ -55,7 +64,7 @@ class Regex(ABC):
         raise NotImplementedError
 
     # ----------------------------------------------------------------------
-    # 2) Fixed-Length Introspection (Point 3 — lookbehind validation)
+    # 2) Fixed-Length Introspection
     # ----------------------------------------------------------------------
 
     def fixed_length(self) -> int | None:
@@ -70,8 +79,8 @@ class Regex(ABC):
         Default: `None` (unknown / variable). A node that CAN determine
         a fixed length overrides this:
         * `Literal` -> `len(text)`
-        * `CharacterType` / `CharacterClass` / `Anchor` (non-empty-width
-          anchors return 0) -> a constant
+        * `CharacterType` / `CharacterClass` -> 1; `Anchor` / `Lookaround`
+          (zero-width) -> 0
         * `Sequence` -> sum of children's fixed lengths, or `None` if any
           child is `None`
         * `Repeat` -> `min * inner_length` when `min == max` and inner has
@@ -104,7 +113,7 @@ class Regex(ABC):
 
         Default: `False` — every other ATOM-precedence node (`Anchor`,
         `CharacterType`, `CharacterClass`, `Group`, `Lookaround`,
-        `GroupReference`, `CharCode`) is already exactly one token by
+        `GroupReference`, `CharacterCode`) is already exactly one token by
         construction and never needs this.
         """
         return False
@@ -112,11 +121,11 @@ class Regex(ABC):
     def to_char_class_fragment(self) -> str:
         """Return this node's representation for use as a standalone item
         inside a `CharacterClass` (`[...]`), where escaping rules differ
-        from the rest of a pattern (Point 4).
+        from the rest of a pattern.
 
         Default: identical to `to_pattern()` — correct for every node
         whose escape syntax is genuinely the same inside and outside a
-        character class (`CharacterType`, `CharCode`). Only `Literal`
+        character class (`CharacterType`, `CharacterCode`). Only `Literal`
         overrides this, since a character class only ever needs to
         escape `] ^ - \\`, a different and much smaller set than the
         general-purpose `re.escape` used by `Literal.to_pattern`.
@@ -128,10 +137,10 @@ class Regex(ABC):
         return self.to_pattern()
 
     # ----------------------------------------------------------------------
-    # 3) Precedence-Aware Rendering (Point 1)
+    # 3) Precedence-Aware Rendering
     # ----------------------------------------------------------------------
 
-    def render(self, parent_precedence: "_Precedence") -> str:
+    def render(self, parent_precedence: "Precedence") -> str:
         """Render this node for embedding inside a parent whose own
         binding power is `parent_precedence`.
 
@@ -157,15 +166,13 @@ class Regex(ABC):
     # 4) Public Interface
     # ----------------------------------------------------------------------
 
-    def compile(self, flags: int = 0) -> Any:
+    def compile(self, flags: int = 0) -> re.Pattern[str]:
         """Compile this node's top-level pattern via `re.compile`.
 
         Top-level rendering always uses `to_pattern()` directly (never
         `render()`) — there is no parent context to wrap against at the
         root of the tree.
         """
-        import re
-
         return re.compile(self.to_pattern(), flags)
 
     # ----------------------------------------------------------------------
@@ -252,7 +259,7 @@ diagnostic formatting — it delegates to `build_child_exception`.
 
 ## Why `_precedence` defaults to ATOM rather than being abstract
 Most nodes in the tree (`Literal`, `CharacterType`, `Anchor`,
-`GroupReference`, `CharCode`, and every container that already emits its
+`GroupReference`, `CharacterCode`, and every container that already emits its
 own delimiters — `Group`, `CharacterClass`, `Lookaround`, `Conditional`)
 are self-delimiting and never need wrapping. Only `Sequence`,
 `Alternation`, and `Repeat` have a real precedence below ATOM and must
@@ -271,7 +278,7 @@ still always be wrapped in an explicit, hand-verified way) — it can
 never cause a wrong pattern to compile, because `None` is
 construction-time-rejected by `Lookaround`, never silently accepted.
 
-## Point 4 — `_usable_in_char_class` is a flag, not a separate hierarchy
+## `_usable_in_char_class` is a flag, not a separate hierarchy
 Chosen deliberately over fully separate `CharacterClassItem`/`Atom` class
 hierarchies (the alternative discussed as "variant 1" in the design
 review): a single `Regex` hierarchy stays consistent with `Rule`'s own
@@ -281,7 +288,7 @@ item._usable_in_char_class` — the same procedural-check pattern
 `Rule.__and__` already uses for `__not_rule__`. This is intentionally
 closer to variant 2 of the original write-up (runtime marker, not a
 type-level split) — full static separation would require either
-duplicating `CharacterType`/`CharCode` under two class hierarchies or
+duplicating `CharacterType`/`CharacterCode` under two class hierarchies or
 introducing a shared mixin/Protocol layer whose benefit (catching a
 `CharacterClass(WordBoundary())` mistake at type-check time instead of
 at construction time) did not outweigh the added structural complexity
@@ -294,21 +301,55 @@ There is no parent node at the root of a tree, so there is no
 would require inventing a fake top-level precedence — `to_pattern()` is
 the honest choice: the root always emits its own fragment unwrapped.
 
-## `needs_wrap_for_repeat` — a narrower hook than `_precedence`, added for Point 2
+## `needs_wrap_for_repeat` — a narrower hook than `_precedence`.
 `Repeat` needs to know something `_precedence` genuinely cannot express:
 not "does this need parentheses to avoid changing meaning in a larger
 expression" (that's precedence), but "is this exactly one quantifiable
 token". Those two questions have the same answer for every ATOM node
 except a multi-character `Literal`, which is why this is a separate
-method with a safe default (`False`) rather than a new `_Precedence`
+method with a safe default (`False`) rather than a new `Precedence`
 level — inventing a level for a single-class exception would have
 forced every other atom to reason about a distinction that, for them,
 never varies.
 
-## `to_char_class_fragment` — a narrower rendering hook, added for Point 4
+## `_repeatable` — "may a quantifier follow me at all?"
+`needs_wrap_for_repeat` answers "does `Repeat` have to add parentheses
+around me?"; `_repeatable` asks the question before it: can a quantifier
+be applied to me in any form? For almost every node the answer is yes
+(sometimes after a wrap), so the default is `True`. The exception is the
+bare anchors `^ $ \\A \\Z \\b \\B`: there is nothing for the quantifier to
+bind to, and `re` fails with "nothing to repeat" (verified against
+`re.compile`: `^*`, `\\b?`, `\\A?`, `a\\Z*`).
+
+Zero-width does NOT mean unrepeatable. `(?=a)*` and `(\\b)*` compile, so
+lookarounds and a group around an anchor stay `True`; the flag is a
+property of the node type, not of "everything with width 0".
+
+Why a flag, and not `isinstance(inner, Anchor)` inside `Repeat`: that
+check would make `containers/` import from `elements/`, a dependency
+pointing against the layering, and every future node with the same
+limitation would require editing `Repeat`. With the flag `Repeat` only
+asks the node — the same shape as `CharacterClass` asking
+`_usable_in_char_class`.
+
+Why `Repeat` refuses instead of silently wrapping the anchor as
+`(?:^)*`: that would compile, but repeating a zero-width assertion
+changes nothing, so the author almost certainly meant something else
+(an optional position, a lookaround). Failing at the line that built the
+node, with a message naming both ways out, is more useful than a pattern
+that quietly does less than it looks like.
+
+The four hooks answer four separate questions and are kept separate on
+purpose:
+* `_precedence` — how must I be wrapped when embedded in a parent?
+* `needs_wrap_for_repeat` — must `Repeat` add parentheses around me?
+* `_repeatable` — may a quantifier follow me at all?
+* `_usable_in_char_class` — may I appear inside `[...]`?
+
+## `to_char_class_fragment` — a narrower rendering hook.
 Same shape of decision as `needs_wrap_for_repeat`: the DEFAULT
 implementation (delegate straight to `to_pattern`) is correct for the
-common case (`CharacterType`, `CharCode` — genuinely the same escape
+common case (`CharacterType`, `CharacterCode` — genuinely the same escape
 syntax either side of `[...]`), and only the one node where the two
 contexts actually diverge (`Literal`) overrides it. Kept as a separate
 method rather than a branch inside `to_pattern` itself, because

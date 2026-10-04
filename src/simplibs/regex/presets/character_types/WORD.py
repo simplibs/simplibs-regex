@@ -9,7 +9,8 @@ Init Params:
     (no parameters)
 
 Pattern:
-    Matches any letter, digit, or underscore (`\\w`).
+    Matches any Unicode letter, digit, or underscore (`\\w`). Under the ASCII
+    flag only `a-z`, `A-Z`, `0-9` and `_`.
 
 Example:
     WORD

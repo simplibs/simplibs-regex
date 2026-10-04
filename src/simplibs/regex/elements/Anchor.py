@@ -1,15 +1,22 @@
+import sys
 # Outers
 from ..base_class import Regex
 # Inners
 from .enums import AnchorKind
-from ._validations import raise_anchor_invalid_kind_error
+from ._validations import (
+    raise_anchor_requires_python_314_error,
+    raise_param_invalid_type_error
+)
+
+# `\z` (AnchorKind.END_STRING_PY314) exists only from this version on.
+_PY314 = (3, 14)
 
 
 class Anchor(Regex):
     """Zero-width position assertion — matches a position, not a character.
 
     Pattern:
-        ^ $ \\A \\Z \\b \\B  (depending on `kind`)
+        ^ $ \\A \\Z \\z \\b \\B  (depending on `kind`)
 
     Example:
         Anchor(AnchorKind.START_STRING)   # -> "\\A"
@@ -18,16 +25,29 @@ class Anchor(Regex):
 
     __slots__ = ("kind",)
 
+    # `re` rejects a quantifier placed directly on an anchor (`^*`, `\\b?` ->
+    # "nothing to repeat"); `Repeat` reads this flag at construction time.
+    _repeatable = False
+
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, kind: AnchorKind) -> None:
+    def __init__(
+        self,
+        kind: AnchorKind
+    ) -> None:
 
-        # 1. Parameter validation
+        # 1. Parameter validation — type
         if not isinstance(kind, AnchorKind):
-            raise_anchor_invalid_kind_error(kind)
+            raise_param_invalid_type_error(
+                "kind", "an AnchorKind member", kind, "AnchorKind.START_STRING"
+            )
 
-        # 2. Parameter assignment
+        # 2. Parameter validation — `\\z` needs Python 3.14+
+        if kind is AnchorKind.END_STRING_PY314 and sys.version_info < _PY314:
+            raise_anchor_requires_python_314_error()
+
+        # 3. Parameter assignment
         self.kind = kind
 
     # ----------------------------------------------------------------------
@@ -39,7 +59,7 @@ class Anchor(Regex):
         return self.kind.value
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -61,16 +81,18 @@ an enum, exactly the pattern `CharacterType` will also follow for
 instances built once in `presets/anchors.py` — see that file once it
 exists.
 
-## `\\z` intentionally omitted from AnchorKind for now
-The raw catalog (konverzace 4) notes `\\z` as a Python 3.14 addition,
-with `\\Z` documented as now equivalent to it. Since this library's
-target Python floor is not yet pinned to 3.14+, `END_STRING` maps to
-`\\Z` (available on every supported version) rather than `\\z`. Revisit
-once the library's minimum Python version is decided — if it lands on
-3.14+, `\\z` can be added as its own `AnchorKind` member (or `END_STRING`
-can be repointed to it) without breaking anything already built on top,
-since callers only ever see the `END_STRING` name, never the literal
-escape sequence.
+## `\\z` and the Python version guard
+`\\z` (end of the whole string, identical in meaning to `\\Z`) exists
+only on Python 3.14+. It is its own member, `END_STRING_PY314`, and
+`__init__` rejects it on older interpreters with a message pointing at
+`END_STRING` — instead of letting `re.compile` fail later with a bare
+`bad escape \\z`. `END_STRING` stays `\\Z`, which works on every
+supported version.
+
+## Never directly repeatable
+`^*`, `\\b?`, `\\A?` and `a\\Z*` all fail in `re` with "nothing to repeat",
+so `_repeatable = False` lets `Repeat` refuse an anchor at construction time
+instead of at compile time. Wrapped in a `Group` the same anchor is accepted.
 
 ## `fixed_length` is unconditionally 0
 Not a simplification — every anchor, by the definition of "zero-width

@@ -1,14 +1,15 @@
-from .raise_anchor_invalid_kind_error import raise_anchor_invalid_kind_error
+from .raise_anchor_requires_python_314_error import raise_anchor_requires_python_314_error
+
 
 _DESIGN_NOTES = """
 # Anchor Validations Sub-Package
 
 ## Purpose
-Provides structured exception emission helpers for Anchor validation.
+Provides structured functions for error reporting during anchor validations, including Python version support checks.
 
 ## Internal Components Registry
 
-| Component                       | Type     | Description                                                                     |
-| :------------------------------ | :------- | :------------------------------------------------------------------------------ |
-| `raise_anchor_invalid_kind_error` | Function | Emits structured `ParamError` when an invalid AnchorKind is received.          |
+| Component                               | Type     | Description                                                                                        |
+| :-------------------------------------- | :------- | :------------------------------------------------------------------------------------------------- |
+| `raise_anchor_requires_python_314_error`| Function | Raises a ValidationError if AnchorKind.END_STRING_PY314 is used on a Python version older than 3.14. |
 """

@@ -18,3 +18,11 @@ def raise_group_flags_require_non_capturing_error() -> NoReturn:
         ),
         exception=ValueError,
     )
+
+
+_DESIGN_NOTES = """
+# raise_group_flags_require_non_capturing_error — Flags Require Non-Capturing Guard
+
+## Purpose
+Guards Group against attempting to capture text inside a scoped-flags construct.
+"""

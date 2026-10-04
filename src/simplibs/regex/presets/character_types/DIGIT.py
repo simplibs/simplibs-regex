@@ -9,7 +9,8 @@ Init Params:
     (no parameters)
 
 Pattern:
-    Matches any decimal digit from `0` to `9` (`\\d`).
+    Matches any Unicode decimal digit (`\\d`): `0`-`9` and digits of other
+    scripts. Compile with the ASCII flag to restrict it to `0`-`9`.
 
 Example:
     DIGIT

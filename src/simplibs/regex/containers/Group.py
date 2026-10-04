@@ -1,25 +1,33 @@
 # Outers
-from ..base_class import Regex, _Precedence
+from ..base_class import Regex, Precedence
 from ..flags.Flag import Flag
 # Inners
+from ._validations import raise_param_not_identifier_error
 from ._validations import (
-    raise_group_inner_not_regex_error,
-    raise_invalid_group_name_error,
     raise_group_atomic_and_name_conflict_error,
     raise_group_atomic_and_flags_conflict_error,
     raise_group_name_and_flags_conflict_error,
     raise_group_name_requires_capturing_error,
     raise_group_flags_require_non_capturing_error,
     raise_group_flags_off_without_flags_error,
+    raise_param_invalid_type_error,
+    raise_flags_off_restricted_error,
+    raise_locale_flag_unsupported_error,
+    raise_group_flags_overlap_error,
+    raise_group_ascii_unicode_conflict_error
 )
+
+# Verified against re.compile: only these four can ever appear in the
+# "-off" part of a scoped flag group. ASCII/LOCALE/UNICODE may only be
+# turned ON, never off.
+_TURNABLE_OFF = frozenset({Flag.IGNORECASE, Flag.MULTILINE, Flag.DOTALL, Flag.VERBOSE})
 
 
 class Group(Regex):
     """A parenthesized group around `inner`.
 
-    Unifies all 5 Python `re` group syntaxes — capturing, non-capturing,
-    named, atomic, and scoped-flags — into one parameterized mechanism
-    (Point 2).
+    Unifies all 6 Python `re` group syntaxes — capturing, non-capturing,
+    named, atomic, and scoped-flags — into one parameterized mechanism.
 
     Pattern:
         (A)             capturing=True (default)
@@ -34,7 +42,7 @@ class Group(Regex):
         Group(DIGIT, capturing=False)                  # -> "(?:\\d)"
         Group(DIGIT, name="year")                       # -> "(?P<year>\\d)"
         Group(DIGIT, atomic=True)                        # -> "(?>\\d)"
-        Group(DIGIT, flags={Flag.IGNORECASE})             # -> "(?i:\\d)"
+        Group(DIGIT, capturing=False, flags={Flag.IGNORECASE})   # -> "(?i:\\d)"
     """
 
     __slots__ = ("inner", "capturing", "name", "atomic", "flags", "flags_off")
@@ -54,21 +62,32 @@ class Group(Regex):
         capturing: bool = True,
         name: str | None = None,
         atomic: bool = False,
-        flags: frozenset[Flag] | None = None,
-        flags_off: frozenset[Flag] | None = None,
+        flags: set[Flag] | frozenset[Flag] | None = None,
+        flags_off: set[Flag] | frozenset[Flag] | None = None,
     ) -> None:
 
-        # 1. Parameter validation — inner
+        # 1. Parameter validation — types
         if not isinstance(inner, Regex):
-            raise_group_inner_not_regex_error(inner)
+            raise_param_invalid_type_error("inner", inner)
+        if not isinstance(capturing, bool):
+            raise_param_invalid_type_error("capturing", capturing)
+        if not isinstance(atomic, bool):
+            raise_param_invalid_type_error("atomic", atomic)
+        if name is not None and not isinstance(name, str):
+            raise_param_invalid_type_error("name", name)
+        for param_name, param_value in (("flags", flags), ("flags_off", flags_off)):
+            if param_value is not None and (
+                not isinstance(param_value, (set, frozenset))
+                or not all(isinstance(f, Flag) for f in param_value)
+            ):
+                raise_param_invalid_type_error(param_name, param_value)
 
-        # 2. Parameter validation — name, if given
-        if name is not None and not (isinstance(name, str) and name.isidentifier()):
-            raise_invalid_group_name_error(name)
+        # 2. Parameter validation — name, if given (must be a valid Python identifier)
+        if name is not None and not name.isidentifier():
+            raise_param_not_identifier_error("name", name)
 
         # 3. Parameter validation — mutually exclusive combinations.
         has_flags = bool(flags) or bool(flags_off)
-
         if atomic and name is not None:
             raise_group_atomic_and_name_conflict_error()
         if atomic and has_flags:
@@ -79,16 +98,37 @@ class Group(Regex):
             raise_group_name_requires_capturing_error()
         if has_flags and capturing:
             raise_group_flags_require_non_capturing_error()
-        if flags_off and not flags:
+        if flags_off and flags is None:
             raise_group_flags_off_without_flags_error()
 
-        # 4. Parameter assignment
+        # 4. Parameter validation — flags_off may only contain flags
+        #    Python's `re` permits to be turned off.
+        if flags_off:
+            not_turnable_off = frozenset(flags_off) - _TURNABLE_OFF
+            if not_turnable_off:
+                raise_flags_off_restricted_error(not_turnable_off)
+
+        # 5. Parameter validation — LOCALE cannot be used with str patterns
+        if flags and Flag.LOCALE in flags:
+            raise_locale_flag_unsupported_error()
+
+        # 6. Parameter validation — flags cannot overlap between flags and flags_off
+        if flags and flags_off:
+            overlapping = frozenset(flags) & frozenset(flags_off)
+            if overlapping:
+                raise_group_flags_overlap_error(overlapping)
+
+        # 7. Parameter validation — ASCII and UNICODE cannot both be active simultaneously
+        if flags and {Flag.ASCII, Flag.UNICODE} <= set(flags):
+            raise_group_ascii_unicode_conflict_error()
+
+        # 8. Parameter assignment
         self.inner = inner
         self.capturing = capturing
         self.name = name
         self.atomic = atomic
-        self.flags = flags or frozenset()
-        self.flags_off = flags_off or frozenset()
+        self.flags = frozenset(flags) if flags else frozenset()
+        self.flags_off = frozenset(flags_off) if flags_off else frozenset()
 
     # ----------------------------------------------------------------------
     # Pattern production
@@ -99,7 +139,7 @@ class Group(Regex):
         #    completely — render it at the loosest possible precedence
         #    (ALTERNATION) so `render` never adds a redundant extra wrap
         #    on top of the one this Group already provides.
-        inner_pattern = self.inner.render(_Precedence.ALTERNATION)
+        inner_pattern = self.inner.render(Precedence.ALTERNATION)
 
         # 2. Build the opening syntax for this specific group variant.
         opening = self._build_opening()
@@ -133,7 +173,7 @@ class Group(Regex):
         return "("
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -144,9 +184,9 @@ class Group(Regex):
 
 
 _DESIGN_NOTES = """
-# Group — Unified Group Mechanism (Point 2)
+# Group — Unified Group Mechanism
 
-## The 5-to-1 collapse
+## The 6-to-1 collapse
 `(A)`, `(?:A)`, `(?P<name>A)`, `(?>A)`, `(?flags:A)`, `(?flags-off:A)`
 are one mechanism: an inner node plus a small set of mutually exclusive
 modifiers. `_build_opening` picks the right prefix from those

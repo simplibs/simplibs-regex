@@ -3,7 +3,7 @@
 The `presets` package holds no logic of its own — every entry here is either a
 pre-built `Regex` instance (`DIGIT`, `START`) or a small factory function returning
 one (`ONE_OR_MORE(inner)`, `NAMED_GROUP(inner, name)`), built directly on top of the
-mechanisms in `atoms/`/`containers/`/`flags/`. Grouped by module below; each card is
+mechanisms in `elements/`/`containers/`/`flags/`. Grouped by module below; each card is
 the preset's full behavior, parameters, and example.
 
 ```python
@@ -49,14 +49,14 @@ the underlying mechanisms.
 [**lookaround**: `LOOKAHEAD` · `NEGATIVE_LOOKAHEAD` · `LOOKBEHIND` ·
 `NEGATIVE_LOOKBEHIND`](#lookaround)
 
-[⬅️ Back to main README](../README.md#presets--ready-made-instances)
+[⬅️ Back to main README](../README.md#presets--ready-made-instances--factories)
 
 ---
 
 ### `anchors`
 
 Module-level `Anchor` instances — see
-[`README_REGEX_ATOMS`](README_REGEX_ELEMENTS.md#anchor) for the full `AnchorKind`
+[`README_REGEX_ELEMENTS`](README_REGEX_ELEMENTS.md#anchor) for the full `AnchorKind`
 reference.
 
 | Preset | Renders |
@@ -67,6 +67,9 @@ reference.
 | `END_STRING` | `\Z` |
 | `WORD_BOUNDARY` | `\b` |
 | `NON_WORD_BOUNDARY` | `\B` |
+
+`END` (`$`) also matches just before a trailing newline at the end of the string; use
+`END_STRING` for the strict end.
 
 > ⚠️ No eager preset for `AnchorKind.END_STRING_PY314` (`\z`) — building one at
 > import time would version-check (and crash) on every interpreter below 3.14. Build
@@ -84,7 +87,7 @@ Sequence(START_STRING, Literal("ab"), END_STRING)   # -> "\Aab\Z"
 ### `any_character`
 
 A single stateless singleton — see
-[`README_REGEX_ATOMS`](README_REGEX_ELEMENTS.md#anycharacter).
+[`README_REGEX_ELEMENTS`](README_REGEX_ELEMENTS.md#anycharacter).
 
 | Preset | Renders |
 |---|---|
@@ -102,7 +105,9 @@ ANY.to_pattern()   # -> "."
 ### `character_types`
 
 Module-level `CharacterType` instances — see
-[`README_REGEX_ATOMS`](README_REGEX_ELEMENTS.md#charactertype).
+[`README_REGEX_ELEMENTS`](README_REGEX_ELEMENTS.md#charactertype).
+Like `re` itself they are Unicode-aware for `str` patterns (`DIGIT` also matches digits of
+other scripts); compile with `Flag.ASCII` to restrict them to ASCII.
 
 | Preset | Renders |
 |---|---|
@@ -242,4 +247,4 @@ LOOKBEHIND(Literal("USD")) + ONE_OR_MORE(DIGIT)   # -> "(?<=USD)\d+"
 
 ---
 
-[⬅️ Back to main README](../README.md#presets--ready-made-instances)
+[⬅️ Back to main README](../README.md#presets--ready-made-instances--factories)

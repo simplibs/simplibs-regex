@@ -1,20 +1,29 @@
 from typing import NoReturn
-from simplibs.exception import ParamError
+from simplibs.exception import ValidationError
 
 
 def raise_literal_empty_error() -> NoReturn:
-    """Raise a structured ParamError when Literal() receives an empty string."""
-    raise ParamError(
+    """Raise a structured ValidationError when literal text is empty."""
+    raise ValidationError(
         error_name="LITERAL_EMPTY",
-        label="Literal text",
-        value="''",
+        label="text",
+        value="",
         problem=(
-            "Literal() requires a non-empty string.",
-            "An empty literal matches nothing meaningful in this DSL.",
+            "Literal text cannot be an empty string.",
+            "An empty literal has no matching behavior and is invalid in regular expression patterns.",
         ),
-        expected="A non-string with len >= 1.",
+        expected="A non-empty string (e.g., 'abc', 'x').",
         how_to_fix=(
-            "Provide a non-empty string for the Literal.",
+            "Provide a non-empty string for the Literal element.",
+            "Example: Literal('text')",
         ),
         exception=ValueError,
     )
+
+
+_DESIGN_NOTES = """
+# raise_literal_empty_error — Empty Literal Guard
+
+## Purpose
+Guards Literal against being initialized with an empty string.
+"""

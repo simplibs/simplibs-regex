@@ -1,12 +1,10 @@
-from enum import Enum
 # Outers
-from ..base_class import Regex, _Precedence
+from ..base_class import Regex, Precedence
 # Inners
 from .enums import LookaroundDirection
 from ._validations import (
     raise_variable_length_lookbehind_error,
-    raise_lookaround_inner_not_regex_error,
-    raise_lookaround_invalid_direction_error,
+    raise_param_invalid_type_error
 )
 
 
@@ -28,10 +26,9 @@ class Lookaround(Regex):
         Lookaround(DIGIT, direction=LookaroundDirection.AHEAD)         # -> "(?=\\d)"
         Lookaround(Literal("USD"), direction=LookaroundDirection.BEHIND)  # -> "(?<=USD)"
 
-    Point 3, enforced here: constructing a BEHIND lookaround whose
-    `inner` has no fixed length raises immediately, instead of letting
-    Python's `re` reject it later at `re.compile()` with a less specific
-    error.
+    Constructing a BEHIND lookaround whose `inner` has no fixed length
+    raises immediately, instead of letting Python's `re` reject it later
+    at `re.compile()` with a less specific error.
     """
 
     __slots__ = ("inner", "direction", "negate")
@@ -50,20 +47,20 @@ class Lookaround(Regex):
         negate: bool = False,
     ) -> None:
 
-        # 1. Parameter validation — inner
+        # 1. Parameter validation — types
         if not isinstance(inner, Regex):
-            raise_lookaround_inner_not_regex_error(inner)
-
-        # 2. Parameter validation — direction
+            raise_param_invalid_type_error("inner", inner)
         if not isinstance(direction, LookaroundDirection):
-            raise_lookaround_invalid_direction_error(direction)
+            raise_param_invalid_type_error("direction", direction)
+        if not isinstance(negate, bool):
+            raise_param_invalid_type_error("negate", negate)
 
-        # 3. Point 3 — fail fast on a variable-length lookbehind, rather
+        # 2. Fail fast on a variable-length lookbehind, rather
         #    than deferring to re.compile()'s own, less specific error.
         if direction is LookaroundDirection.BEHIND and inner.fixed_length() is None:
             raise_variable_length_lookbehind_error(inner)
 
-        # 4. Parameter assignment
+        # 3. Parameter assignment
         self.inner = inner
         self.direction = direction
         self.negate = negate
@@ -76,7 +73,7 @@ class Lookaround(Regex):
         # 1. This node's own parentheses already delimit `inner`
         #    completely — render at the loosest precedence, same
         #    reasoning as Group.to_pattern.
-        inner_pattern = self.inner.render(_Precedence.ALTERNATION)
+        inner_pattern = self.inner.render(Precedence.ALTERNATION)
 
         prefix = self._build_prefix()
         return f"{prefix}{inner_pattern})"
@@ -90,7 +87,7 @@ class Lookaround(Regex):
         return "(?<!" if self.negate else "(?<="
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -101,14 +98,13 @@ class Lookaround(Regex):
 
 
 _DESIGN_NOTES = """
-# Lookaround — Unified Assertion Mechanism, Point 3 Enforced
+# Lookaround — Unified Assertion Mechanism
 
 ## The 4-to-1 collapse
 `(?=A)` `(?!A)` `(?<=A)` `(?<!A)` are one mechanism: a direction plus a
 negate flag, exactly the same "small closed set of modifiers on one
-inner node" shape as `Group`'s five variants and `Repeat`'s three modes.
+inner node" shape as `Group`'s six variants and `Repeat`'s three modes.
 
-## Where Point 3 actually gets enforced
 This is the payoff of `fixed_length` existing on `Regex` at all: step 3
 of `__init__` calls `inner.fixed_length()` and rejects `None` immediately
 when `direction is BEHIND`. Every `fixed_length` override written so

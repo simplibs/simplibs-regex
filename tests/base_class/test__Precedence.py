@@ -1,16 +1,16 @@
 """
-Tests for the _Precedence enum.
+Tests for the Precedence enum.
 """
-from simplibs.regex.base_class._Precedence import _Precedence
+from simplibs.regex.base_class.enums.Precedence import Precedence
 
 
 def test_precedence_ordering():
     """Verify that precedence levels follow the correct numerical order (loosest to tightest)."""
-    assert _Precedence.ALTERNATION < _Precedence.SEQUENCE
-    assert _Precedence.SEQUENCE < _Precedence.REPEAT
-    assert _Precedence.REPEAT < _Precedence.ATOM
+    assert Precedence.ALTERNATION < Precedence.SEQUENCE
+    assert Precedence.SEQUENCE < Precedence.REPEAT
+    assert Precedence.REPEAT < Precedence.ATOM
 
-    assert _Precedence.ALTERNATION.value == 0
-    assert _Precedence.SEQUENCE.value == 1
-    assert _Precedence.REPEAT.value == 2
-    assert _Precedence.ATOM.value == 3
+    assert Precedence.ALTERNATION.value == 0
+    assert Precedence.SEQUENCE.value == 1
+    assert Precedence.REPEAT.value == 2
+    assert Precedence.ATOM.value == 3

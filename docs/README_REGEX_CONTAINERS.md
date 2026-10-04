@@ -2,7 +2,7 @@
 
 The `containers` package holds every node that combines *other* nodes into a larger
 pattern — the connective tissue that turns individual atoms (`Literal`, `DIGIT`,
-`Anchor`) into arbitrarily complex regexes. This is also where three of `Regex`'s own
+`Anchor`) into arbitrarily complex regexes. This is also where `Regex`'s two
 composition operators (`+`, `|`) resolve to, and where every syntax *family* in
 Python's `re` — quantifiers, groups, lookarounds — collapses into one parameterized
 mechanism instead of one class per syntax variant.
@@ -138,7 +138,11 @@ def _build_quantifier(self) -> str:
 
 A multi-character `Literal` passed as `inner` is automatically wrapped in `(?:...)`
 (via `needs_wrap_for_repeat`) so the quantifier applies to the whole literal, not just
-its last character. `fixed_length` returns `min * inner_length` only when `min ==
+its last character. Any other inner that is not a single token (`Sequence`,
+`Alternation`, another `Repeat`) is wrapped too, e.g.
+`Repeat(Repeat(DIGIT), min=3, max=3)` -> `(?:\d*){3}`. An `Anchor` cannot be repeated directly (`re` rejects `^*` and `\b?` with
+"nothing to repeat"), so `Repeat` raises on it; wrap it in a `Group` if you really need to.
+`fixed_length` returns `min * inner_length` only when `min ==
 max` and `inner` itself has a fixed length (with `{0}` always reporting `0`,
 regardless of `inner`).
 
@@ -157,13 +161,15 @@ A parenthesized group around `inner` — unifies 6 group syntaxes into one mecha
   `capturing=True`.
 * `atomic` (*bool*, keyword-only, default `False`): No backtracking into the group.
   Mutually exclusive with `name` and `flags`/`flags_off`.
-* `flags` (*frozenset[Flag] | None*, keyword-only): Flags scoped to `inner` only.
+* `flags` (*set[Flag] | frozenset[Flag] | None*, keyword-only): Flags scoped to `inner` only.
   Requires `capturing=False`. Mutually exclusive with `name`/`atomic`.
-* `flags_off` (*frozenset[Flag] | None*, keyword-only): Flags explicitly turned off
+* `flags_off` (*set[Flag] | frozenset[Flag] | None*, keyword-only): Flags explicitly turned off
   inside the scope. Requires `flags` to also be given, and may only contain
   `IGNORECASE`, `MULTILINE`, `DOTALL`, `VERBOSE` — Python's `re` never allows `ASCII`,
   `LOCALE`, or `UNICODE` to be turned off. `Flag.LOCALE` in `flags` is rejected
-  outright, since it cannot be used with a `str` pattern at all.
+  outright, since it cannot be used with a `str` pattern at all. 
+  The same flag cannot be present in both `flags` and `flags_off`. 
+  `ASCII` and `UNICODE` cannot be combined within `flags`.
 
 **Example usage:**
 ```python
@@ -247,6 +253,10 @@ matches `no` (or nothing, if `no` is omitted).
 Conditional(1, Literal("a"), Literal("b"))   # -> "(?(1)a|b)"
 Conditional("quoted", Literal('"'))          # -> "(?(quoted)\")"
 ```
+
+A `yes`/`no` branch that is a `Sequence` or `Alternation` is wrapped in `(?:...)`, since
+`re` allows only two branches: `Conditional(1, Literal("a") | Literal("b"))` ->
+`(?(1)(?:a|b))`.
 
 Unlike `Repeat`/`Group`/`Lookaround`, this has only one real syntax shape (with or
 without a `no` branch), so it needs no internal mode enum — `no: Regex | None = None`

@@ -1,20 +1,33 @@
 from typing import NoReturn
-from simplibs.exception import ParamError
+from simplibs.exception import ValidationError
 
 
-def raise_group_reference_numeric_out_of_range_error(id_or_name: int) -> NoReturn:
-    """Raise a structured ParamError when GroupReference numeric id is less than 1."""
-    raise ParamError(
+def raise_group_reference_numeric_out_of_range_error(
+    value: int,
+    low: int,
+    high: int,
+) -> NoReturn:
+    """Raise a structured ValidationError when numeric group reference is out of range (1-99)."""
+    raise ValidationError(
         error_name="GROUP_REFERENCE_NUMERIC_OUT_OF_RANGE",
-        label="GroupReference numeric id",
-        value=str(id_or_name),
+        label="id_or_name",
+        value=value,
         problem=(
-            f"GroupReference() numeric id must be >= 1, got {id_or_name}.",
-            "Group reference numbers must be positive integers starting from 1.",
+            f"Numeric group reference {value} is out of range.",
+            f"Python's regex engine supports numbered backreferences only from {low} to {high} (values >= 100 are treated as octal escapes).",
         ),
-        expected="An integer >= 1.",
+        expected=f"An integer between {low} and {high}, or a named group string.",
         how_to_fix=(
-            "Provide a valid group number greater than or equal to 1.",
+            f"Provide a group number between {low} and {high}, or use a named group reference.",
+            "Example: GroupReference(5) or GroupReference('group_name')",
         ),
         exception=ValueError,
     )
+
+
+_DESIGN_NOTES = """
+# raise_group_reference_numeric_out_of_range_error — Numeric Out of Range Guard
+
+## Purpose
+Guards numeric group references against exceeding the maximum supported limit of 99.
+"""

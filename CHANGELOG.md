@@ -7,6 +7,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.0] - 2026-10-02
+
+### ✨ Added
+
+#### Core Class
+
+* `Regex._repeatable` — class-level marker (default `True`) for nodes `re` refuses to quantify
+  directly; `Anchor` sets it to `False`. `Repeat` reads it at construction time.
+
+#### Containers
+
+* `Repeat` rejects a bare `Anchor` as `inner` at construction time (`^*`, `\b?`, `\A?` fail in `re`
+  with "nothing to repeat"); an anchor wrapped in a `Group`, or a lookaround, stays legal
+
+#### Elements
+
+* `AnyCharacter` — the `.` wildcard node. Never usable inside a `CharacterClass`
+  (`[.]` means a literal dot), enforced at construction time. It was listed in 0.1.0
+  but missing from the package.
+* `CharacterRange.__repr__` — `CharacterRange('a', 'z')`; the inherited `repr` is built
+  from `to_pattern()`, which deliberately raises for a bare range
+
+#### Presets
+
+* `any_character` — `ANY`, the shared `AnyCharacter` instance
+* `character_classes`, `literals` and the `WITH_FLAGS`, `CASE_INSENSITIVE`, `VERBOSE_GROUP` group presets —
+  listed in 0.1.0 but missing from the package
+
+#### Testing
+
+* `testing` — new sub-package with the `assert_pattern` test helper: verifies a
+  term's rendered pattern string and its matching / non-matching texts, with isolated
+  subtests (`verbose=True`) or fail-fast behaviour (`verbose=False`), compiled through
+  `RegexPattern` with optional `flags`. Available as `simplibs.regex.testing`; it is
+  deliberately not re-exported from the top-level `simplibs.regex` package.
+
+#### Documentation
+
+* `docs/README_REGEX_TESTING.md` and a `testing/` section in the root `README.md`
+* `compiled` property documented in `docs/README_REGEX_COMPILER.md`
+* Requirements section in the root `README.md`
+
+### 🐛 Fixed
+
+* `Repeat` — a nested `Repeat` is now wrapped: `Repeat(Repeat(x), min=3, max=3)`
+  rendered `x*{3}`, which `re` rejects ("multiple repeat"); it now renders `(?:x*){3}`.
+  The inner node is rendered at `ATOM` precedence.
+* `Conditional` — a `Sequence` or `Alternation` branch is now wrapped in `(?:...)`.
+  An unwrapped alternation added extra branches to `(?(1)yes|no)` (`re` accepts exactly
+  two) or silently shifted the yes/no split.
+* `Group` — the same flag in both `flags` and `flags_off`, and `ASCII` together with `UNICODE`, are now
+  rejected at construction time (`re.compile` rejects both)
+* `Group` — `flags_off` together with an explicit empty `flags=frozenset()` was
+  rejected, although the error message itself recommended that form
+* `CharacterClass` / `Literal` — `[ & ~ |` are now escaped inside `[...]`; adjacent
+  single-character literals could form `[[`, `&&`, `||`, `~~`, which `re` reserves for
+  future set operations and flags with a `FutureWarning`
+* `RegexPattern` — incompatible top-level flags (`ASCII` together with `UNICODE`) leaked
+  a bare `ValueError` from `re.compile`; it is now reported as the structured
+  invalid-pattern error like every other compile failure
+* `CharacterCode` — the upper bound of octal escapes is now `0o377` (was `0o777`);
+  `\400` and above are rejected by Python's `re`, and are now rejected at construction
+  time instead of failing later in `re.compile()`
+* `CharacterCode` — `bool` values are rejected instead of silently rendering as `\x01`
+* `CharacterCode` — an unknown Unicode name (or the name of a multi-character named sequence) for
+  `NAMED` is rejected at construction time instead of when the pattern is compiled
+* `GroupReference` — numeric ids are limited to `1`–`99` (`\100` and above are octal
+  escapes in Python's `re`); `bool` values are rejected
+
+### 🔄 Changed
+
+* `GroupReference` — a numeric reference embedded in a `Sequence` or `Repeat` now
+  renders wrapped, `(?:\1)`, so a following digit can no longer merge into its number
+  (`\1` + `0` used to render `\10`). Standalone rendering is unchanged (`\1`).
+* Type-check errors — every wrong-typed constructor argument is now reported by one shared helper,
+  `raise_param_invalid_type_error` (`PARAM_INVALID_TYPE_ERROR`, a `ParamError` wrapping `TypeError`),
+  instead of one dedicated `raise_*` function per parameter; the message names the parameter,
+  the expected type and an example
+* `Group`, `RegexPattern` and `assert_pattern` — `flags` (and `flags_off`) accept any `set` or `frozenset` of
+  `Flag`; `Group` and `RegexPattern` store it as a `frozenset`
+* Internal layout — `_Precedence` is now `Precedence` in `base_class/enums/`, and the
+  kind enums (`AnchorKind`, `CharacterTypeKind`, `CharacterCodeKind`, `RepeatMode`,
+  `LookaroundDirection`) live in `enums/` sub-packages of their package
+* `Regex.compile` — return annotation is `re.Pattern[str]` (was `Any`)
+
+### 📋 Improved
+
+* Documentation corrected against the code: stale `_Precedence` / `atoms/` references,
+  broken cross-README anchors, wrong example results (`findall`, `sub`,
+  `pattern_string`), the flag-restriction and `Conditional` / `Repeat` wrapping rules,
+  and Unicode behaviour of the `character_types` presets
+* Preset docstrings: `DIGIT` / `WORD` are Unicode-aware, `WORD_BOUNDARY` and `END`
+  described precisely
+
+### 📦 Requirements
+
+* Python 3.11+
+* simple-exception 1.0.0+
+
+---
+
 ## [0.1.0] - 2026-09-30
 
 ### ✨ Added
@@ -53,7 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   item is legal in character-class context (different escaping/meaning rules apply
   inside `[...]` than outside it)
 * `GroupReference` — backreferences (`\1` … `\99`, `(?P=name)`)
-* `CharCode` / `CharCodeKind` — character-code escapes (`\xFF \uFFFF \Uhhhhhhhh
+* `CharacterCode` / `CharacterCodeKind` — character-code escapes (`\xFF \uFFFF \Uhhhhhhhh
   \N{name} \ooo`), with per-kind numeric range validation
 
 #### Flags

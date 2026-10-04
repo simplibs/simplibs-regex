@@ -1,27 +1,30 @@
-"""
-Tests for raise_group_reference_numeric_out_of_range_error.
-"""
 import pytest
-from simplibs.regex.elements._validations import (
-    raise_group_reference_numeric_out_of_range_error,
-)
-from simplibs.exception.exceptions import ParamError
+from simplibs.exception import ValidationError
 from simplibs.exception.testing import assert_exception_function
+from simplibs.regex.elements._validations import raise_group_reference_numeric_out_of_range_error
 
 
-@pytest.mark.parametrize("invalid_id", [0, -1, -5])
-def test_raise_group_reference_numeric_out_of_range_error(subtests, invalid_id):
-    """Verify that a numeric id < 1 raises a structured ParamError."""
+def test_raise_group_reference_numeric_out_of_range_error_contract(subtests) -> None:
+    invalid_value = 150
+    low, high = 1, 99
+
     assert_exception_function(
         subtests,
         raise_group_reference_numeric_out_of_range_error,
-        invalid_params=(invalid_id,),
-        exception_type=ParamError,
-        value=str(invalid_id),
-        label="GroupReference numeric id",
-        expected="An integer >= 1.",
-        problem="numeric id must be >= 1",
-        how_to_fix="Provide a valid group number greater than or equal to 1",
+        invalid_params=(invalid_value, low, high),
+        exception_type=ValidationError,
+        error_name="GROUP_REFERENCE_NUMERIC_OUT_OF_RANGE",
+        label="id_or_name",
+        value=invalid_value,
+        problem=(
+            f"Numeric group reference {invalid_value} is out of range.",
+            f"Python's regex engine supports numbered backreferences only from {low} to {high} (values >= 100 are treated as octal escapes).",
+        ),
+        expected=f"An integer between {low} and {high}, or a named group string.",
+        how_to_fix=(
+            f"Provide a group number between {low} and {high}, or use a named group reference.",
+            "Example: GroupReference(5) or GroupReference('group_name')",
+        ),
         exception=ValueError,
-        verbose=False
+        verbose=False,
     )

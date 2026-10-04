@@ -2,12 +2,15 @@
 Tests for the Repeat container.
 """
 import pytest
-from simplibs.regex.base_class.Regex import Regex, _Precedence
+from simplibs.regex.base_class.Regex import Regex, Precedence
 from simplibs.regex.containers.Repeat import Repeat, RepeatMode
-
+from simplibs.regex.containers.Group import Group
+from simplibs.regex.containers.Lookaround import Lookaround, LookaroundDirection
+from simplibs.regex.elements.Anchor import Anchor, AnchorKind
+from simplibs.regex.presets.character_types.DIGIT import DIGIT
 
 class DummyNode(Regex):
-    def __init__(self, pattern: str, precedence: _Precedence = _Precedence.ATOM, fixed_len: int | None = None, wrap_repeat: bool = False):
+    def __init__(self, pattern: str, precedence: Precedence = Precedence.ATOM, fixed_len: int | None = None, wrap_repeat: bool = False):
         self._pattern = pattern
         self._precedence = precedence
         self._fixed_len = fixed_len
@@ -79,3 +82,14 @@ def test_repeat_fixed_length():
 
     # min == max with variable inner length returns None
     assert Repeat(inner_var, min=3, max=3).fixed_length() is None
+
+
+@pytest.mark.parametrize("kind", [AnchorKind.START, AnchorKind.WORD_BOUNDARY, AnchorKind.END_STRING])
+def test_repeat_rejects_a_bare_anchor(kind):
+   with pytest.raises(ValueError):
+       Repeat(Anchor(kind), min=0)
+
+
+def test_repeat_accepts_a_wrapped_anchor_and_a_lookaround():
+   assert Repeat(Group(Anchor(AnchorKind.START), capturing=False)).to_pattern() == "(?:^)*"
+   assert Repeat(Lookaround(DIGIT, direction=LookaroundDirection.AHEAD)).to_pattern() == "(?=\\d)*"

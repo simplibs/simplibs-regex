@@ -2,8 +2,8 @@ from enum import Enum
 
 
 class CharacterTypeKind(Enum):
-    """Which built-in character class \d \D \w \W \s \S a
-    CharacterType represents."""
+    r"""Which built-in character class (\d \D \w \W \s \S)
+    a CharacterType represents."""
 
     DIGIT = r"\d"
     NON_DIGIT = r"\D"

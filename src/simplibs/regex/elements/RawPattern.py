@@ -1,5 +1,10 @@
 # Outers
-from ..base_class import Regex, _Precedence
+from ..base_class import Regex, Precedence
+# Inners
+from ._validations import (
+    raise_raw_pattern_empty_error,
+    raise_param_invalid_type_error
+)
 
 
 class RawPattern(Regex):
@@ -16,7 +21,7 @@ class RawPattern(Regex):
 
     Example:
         RawPattern(r"a{2,4}")            # -> "a{2,4}", inserted as-is
-        RawPattern(r"(?i)legacy_flag")   # -> whatever the caller wrote, verbatim
+        RawPattern("(?:x|y)+")           # -> "(?:x|y)+", verbatim
     """
 
     __slots__ = ("text",)
@@ -26,31 +31,32 @@ class RawPattern(Regex):
     # structure (does it contain a top-level "|"? a quantifier?) is
     # unknown and unknowable without parsing it, which is exactly the
     # work this DSL exists to avoid doing.
-    _precedence = _Precedence.ALTERNATION
+    _precedence = Precedence.ALTERNATION
 
     # Never usable inside a CharacterClass — the escaping rules inside
-    # [...] differ from the rest of a pattern (Point 4), and an opaque
+    # [...] differ from the rest of a pattern, and an opaque
     # raw string cannot be verified to follow them.
     _usable_in_char_class = False
 
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, text: str) -> None:
+    def __init__(
+        self,
+        text: str
+    ) -> None:
 
-        # 1. Parameter validation
+        # 1. Parameter validation — type
         if not isinstance(text, str):
-            raise TypeError(
-                f"RawPattern() requires a str, got {text!r} of type "
-                f"'{type(text).__name__}'."
-            )
-        if text == "":
-            raise ValueError(
-                "RawPattern() requires a non-empty string — an empty "
-                "raw fragment has no meaningful syntax to insert."
+            raise_param_invalid_type_error(
+                "text", "a str", text, 'RawPattern("a{2,4}")'
             )
 
-        # 2. Parameter assignment
+        # 2. Parameter validation — raw pattern text cannot be empty
+        if text == "":
+            raise_raw_pattern_empty_error()
+
+        # 3. Parameter assignment
         self.text = text
 
     # ----------------------------------------------------------------------
@@ -62,7 +68,7 @@ class RawPattern(Regex):
         return self.text
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -99,15 +105,15 @@ every method answers as conservatively as possible:
   it can never be the cause of a `Lookaround` silently compiling
   something Python's `re` would have rejected.
 * `_usable_in_char_class = False` — never offered as a CharacterClass
-  item, since Point 4's escaping rules cannot be confirmed for opaque
-  text.
+  item, since the escaping rules inside [...] cannot be confirmed for
+  opaque text.
 
 This is the same design stance `CharacterRange.to_pattern` takes when it
 refuses to render standalone — when a node genuinely cannot know
 something safely, it says so structurally, rather than quietly guessing
 and letting a wrong guess surface as a confusing bug three layers away.
 
-## Why this lives in `atoms/`, not as a `RegexPattern` constructor path
+## Why this lives in `elements/`, not as a `RegexPattern` constructor path
 Keeping it as its own node (rather than accepting a bare `str` in
 `RegexPattern.__init__`) preserves a real, load-bearing distinction:
 `Literal("b.c")` and `RawPattern("b.c")` render to visibly different

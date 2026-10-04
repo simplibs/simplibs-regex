@@ -18,3 +18,11 @@ def raise_group_name_requires_capturing_error() -> NoReturn:
         ),
         exception=ValueError,
     )
+
+
+_DESIGN_NOTES = """
+# raise_group_name_requires_capturing_error — Name Requires Capturing Guard
+
+## Purpose
+Guards Group against disabling capturing on a named group, which is structurally impossible in Python regex.
+"""

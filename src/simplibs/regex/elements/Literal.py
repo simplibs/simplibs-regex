@@ -4,9 +4,9 @@ from ..base_class import Regex
 # Inners
 from ._helpers import escape_char_class_char
 from ._validations import (
-    raise_literal_invalid_type_error,
     raise_literal_empty_error,
     raise_literal_not_single_char_error,
+    raise_param_invalid_type_error
 )
 
 
@@ -27,24 +27,31 @@ class Literal(Regex):
     # rendered literal is already self-delimiting — see caveat below on
     # multi-character literals and Repeat.
 
-    # Point 4 — a Literal is only usable inside a CharacterClass when it
+    # A Literal is only usable inside a CharacterClass when it
     # is exactly one character wide; CharacterClass itself enforces the
     # length at the point of use (see its own validation), since a
-    # class-level flag can't express "sometimes, depending on content"[cite: 30].
+    # class-level flag can't express "sometimes, depending on content".
     _usable_in_char_class = True
 
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, text: str) -> None:
+    def __init__(
+        self,
+        text: str
+    ) -> None:
 
-        # 1. Parameter validation
+        # 1. Parameter validation — type
         if not isinstance(text, str):
-            raise_literal_invalid_type_error(text)
+            raise_param_invalid_type_error(
+                "text", "a str", text, 'Literal("abc")'
+            )
+
+        # 2. Parameter validation — literal text cannot be empty
         if text == "":
             raise_literal_empty_error()
 
-        # 2. Parameter assignment
+        # 3. Parameter assignment
         self.text = text
 
     # ----------------------------------------------------------------------
@@ -52,42 +59,39 @@ class Literal(Regex):
     # ----------------------------------------------------------------------
     def to_pattern(self) -> str:
 
-        # 1. Escape every regex-special character in the literal text[cite: 30].
+        # 1. Escape every regex-special character in the literal text.
         return re.escape(self.text)
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
         # 1. A literal always matches exactly len(text) characters,
         #    regardless of escaping (re.escape never changes how many
-        #    source characters are consumed at match time)[cite: 30].
+        #    source characters are consumed at match time).
         return len(self.text)
 
     # ----------------------------------------------------------------------
-    # Repeat-wrapping hook (Point 2 — see Regex.needs_wrap_for_repeat)
+    # Repeat-wrapping hook
     # ----------------------------------------------------------------------
     def needs_wrap_for_repeat(self) -> bool:
 
         # 1. A quantifier binds to exactly one token — only a
-        #    single-character literal already qualifies on its own[cite: 30].
+        #    single-character literal already qualifies on its own.
         return len(self.text) > 1
 
     # ----------------------------------------------------------------------
-    # Character-class rendering hook (Point 4 — see Regex.to_char_class_fragment)
+    # Character-class rendering hook
     # ----------------------------------------------------------------------
     def to_char_class_fragment(self) -> str:
 
-        # 1. Only reachable for a single-character Literal —
-        #    CharacterClass.__init__ rejects a longer one before this is
-        #    ever called (see CharacterClass's own validation), so this
-        #    is a defensive assertion, not the primary guard[cite: 30].
+        # 1. Defensive assertion — single-character check for character class fragment
         if len(self.text) != 1:
             raise_literal_not_single_char_error(self.text)
 
         # 2. Character-class escaping only cares about a different,
-        #    smaller set of specials than general-purpose re.escape[cite: 30].
+        #    smaller set of specials than general-purpose re.escape.
         return escape_char_class_char(self.text)
 
 
@@ -99,16 +103,16 @@ A single `Literal("abc")` rendered on its own is self-delimiting the
 same way any atom is — nothing needs to wrap it. The caveat lives on the
 CONSUMING side, not here: `Repeat` binds to exactly one preceding
 "unit", and a multi-character `Literal` is NOT one unit in that sense
-(`Literal("ab").repeat(3)` must render as `(?:ab){3}`, not `ab{3}`,
+(`Repeat(Literal("ab"), min=3, max=3)` must render as `(?:ab){3}`, not `ab{3}`,
 or the repeat would apply only to the final `b`). This is intentionally
 NOT solved by lowering `Literal`'s own `_precedence` — a `Literal` is
 still correctly unwrapped when embedded in a `Sequence` or
 `Alternation`, where per-character binding is irrelevant. It is `Repeat`
 itself that must special-case multi-character literals when deciding
 whether to wrap its inner node; see `Repeat.py`'s own design notes for
-exactly how (`Repeat` checks the literal's rendered length, not a
-generic precedence comparison, precisely because `_Precedence` alone
-cannot express "binds to one character" as a level).
+exactly how (`Repeat` asks the dedicated `needs_wrap_for_repeat()` hook,
+because `Precedence` alone cannot express "binds to one character" as
+a level).
 
 ## Why empty string is rejected
 An empty `Literal` would render as `""` — silently invisible inside a
@@ -137,5 +141,5 @@ no way to know that ahead of time), the flag stays a simple opt-in and
 `CharacterClass.__init__` is the one place that actually inspects
 `len(item.text)` for any `Literal` item it receives, raising there if
 it isn't exactly one character. See `CharacterClass.py`'s own design
-notes once that file exists.
+notes.
 """

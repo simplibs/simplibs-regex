@@ -1,12 +1,11 @@
 # Outers
-from ..base_class import Regex, _Precedence
+from ..base_class import Regex, Precedence
 # Inners
 from ._validations import (
+    raise_param_not_identifier_error,
     raise_conditional_invalid_numeric_id_error,
-    raise_conditional_invalid_name_error,
     raise_conditional_invalid_id_type_error,
-    raise_conditional_yes_not_regex_error,
-    raise_conditional_no_not_regex_error,
+    raise_param_invalid_type_error
 )
 
 
@@ -31,25 +30,32 @@ class Conditional(Regex):
     # ----------------------------------------------------------------------
     # Constructor initialization
     # ----------------------------------------------------------------------
-    def __init__(self, id_or_name: int | str, yes: Regex, no: Regex | None = None) -> None:
+    def __init__(
+        self,
+        id_or_name: int | str,
+        yes: Regex,
+        no: Regex | None = None
+    ) -> None:
 
-        # 1. Parameter validation — id_or_name (explicit condition check + dedicated raise)
-        if isinstance(id_or_name, int):
-            if id_or_name < 1:
-                raise_conditional_invalid_numeric_id_error(id_or_name)
-        elif isinstance(id_or_name, str):
-            if not id_or_name.isidentifier():
-                raise_conditional_invalid_name_error(id_or_name)
-        else:
+        # 1. Parameter validation — id_or_name type (bool is a subclass of int, so it is excluded explicitly)
+        if isinstance(id_or_name, bool) or not isinstance(id_or_name, (int, str)):
             raise_conditional_invalid_id_type_error(id_or_name)
 
-        # 2. Parameter validation — yes/no
-        if not isinstance(yes, Regex):
-            raise_conditional_yes_not_regex_error(yes)
-        if no is not None and not isinstance(no, Regex):
-            raise_conditional_no_not_regex_error(no)
+        # 2. Parameter validation — numeric ID range check (must be at least 1)
+        if isinstance(id_or_name, int) and id_or_name < 1:
+            raise_conditional_invalid_numeric_id_error(id_or_name)
 
-        # 3. Parameter assignment
+        # 3. Parameter validation — string ID/name check (must be a valid Python identifier)
+        if isinstance(id_or_name, str) and not id_or_name.isidentifier():
+            raise_param_not_identifier_error("id_or_name", id_or_name)
+
+        # 4. Parameter validation — branches
+        if not isinstance(yes, Regex):
+            raise_param_invalid_type_error("yes", yes)
+        if no is not None and not isinstance(no, Regex):
+            raise_param_invalid_type_error("no", no)
+
+        # 5. Parameter assignment
         self.id_or_name = id_or_name
         self.yes = yes
         self.no = no
@@ -59,19 +65,20 @@ class Conditional(Regex):
     # ----------------------------------------------------------------------
     def to_pattern(self) -> str:
 
-        # 1. Own parentheses already delimit both branches — render each
-        #    at the loosest precedence, same reasoning as Group/Lookaround.
-        yes_pattern = self.yes.render(_Precedence.ALTERNATION)
+        # 1. The `|` between the branches is Conditional's OWN syntax (and
+        #    `re` allows at most two branches), so an Alternation branch
+        #    must be wrapped: render each branch at SEQUENCE precedence.
+        yes_pattern = self.yes.render(Precedence.SEQUENCE)
         prefix = f"(?({self.id_or_name})"
 
         if self.no is None:
             return f"{prefix}{yes_pattern})"
 
-        no_pattern = self.no.render(_Precedence.ALTERNATION)
+        no_pattern = self.no.render(Precedence.SEQUENCE)
         return f"{prefix}{yes_pattern}|{no_pattern})"
 
     # ----------------------------------------------------------------------
-    # Fixed-length introspection (Point 3)
+    # Fixed-length introspection
     # ----------------------------------------------------------------------
     def fixed_length(self) -> int | None:
 
@@ -91,7 +98,6 @@ class Conditional(Regex):
 
         return None
 
-
 _DESIGN_NOTES = """
 # Conditional — Group-Existence Branching
 
@@ -101,6 +107,13 @@ Python `re` syntax shape (with or without a `no` branch) — there is no
 family of variant syntaxes to collapse here, so it does not need an
 internal mode enum the way those three do. `no: Regex | None = None`
 already captures the one genuine variation point.
+
+## Why branches render at SEQUENCE, not ALTERNATION
+Unlike Group/Lookaround, the pipe inside `(?(1)yes|no)` is part of
+Conditional's own syntax, and `re` accepts exactly two branches. An
+unwrapped Alternation branch would add a third (`(?(1)a|b|c)` ->
+"conditional backref with more than two branches") or silently shift
+the yes/no split. SEQUENCE wraps it: `(?(1)(?:a|b))`.
 
 ## `fixed_length` mirrors Alternation, with one extra case
 A `Conditional` with no `no` branch is, in effect, an optional match —
