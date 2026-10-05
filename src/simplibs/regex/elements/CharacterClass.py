@@ -18,7 +18,7 @@ class CharacterClass(Regex):
         [^items]    negate=True
 
     Only accepts items where `_usable_in_char_class` is `True` — a
-    single-character `Literal`, a `CharacterType` (`DIGIT`, `WORD`, ...),
+    single-character `Literal`, a `CharacterType` (`DIGIT`, `WORD_CHARACTER`, ...),
     a `CharacterRange`, or a `CharacterCode`. This is enforced at
     construction time: escape semantics differ inside `[...]`, so only
     nodes that know how to render themselves correctly in that context

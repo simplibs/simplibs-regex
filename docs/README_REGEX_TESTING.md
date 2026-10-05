@@ -66,10 +66,11 @@ does not match) the given texts.
   something else.
 
 **Example usage:**
+
 ```python
 from simplibs.regex.elements.Literal import Literal
 from simplibs.regex.flags.Flag import Flag
-from simplibs.regex.presets.character_types import DIGIT, WORD
+from simplibs.regex.presets.character_types import DIGIT, WORD_CHARACTER
 from simplibs.regex.testing import assert_pattern
 
 # A single term
@@ -84,6 +85,7 @@ assert_pattern(
 
 # A whole catalog
 import pytest
+
 
 @pytest.mark.parametrize(
     ("node", "expected", "matches", "non_matches"),

@@ -162,7 +162,7 @@ string check covers the rest.
 ## 7. Subtest names
 The default prefix is `[expected_pattern]`, not the class name: every
 `CharacterType` preset has the same class name, while the pattern string
-tells `DIGIT` and `WORD` apart at a glance. Tested values are shown with
+tells `DIGIT` and `WORD_CHARACTER` apart at a glance. Tested values are shown with
 `repr`, so whitespace and newlines stay visible. `intro` replaces the
 prefix when a more descriptive name is wanted.
 

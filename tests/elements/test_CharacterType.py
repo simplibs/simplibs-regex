@@ -9,8 +9,8 @@ from simplibs.regex.testing import assert_pattern
 _CASES = [
     (CharacterTypeKind.DIGIT, "\\d", ["0", "5"], ["a", " ", "55", ""]),
     (CharacterTypeKind.NON_DIGIT, "\\D", ["a", " ", "-"], ["5", "ab"]),
-    (CharacterTypeKind.WORD, "\\w", ["a", "Z", "9", "_"], [" ", "-", "!"]),
-    (CharacterTypeKind.NON_WORD, "\\W", [" ", "-", "!"], ["a", "_", "9"]),
+    (CharacterTypeKind.WORD_CHARACTER, "\\w", ["a", "Z", "9", "_"], [" ", "-", "!"]),
+    (CharacterTypeKind.NON_WORD_CHARACTER, "\\W", [" ", "-", "!"], ["a", "_", "9"]),
     (CharacterTypeKind.WHITESPACE, "\\s", [" ", "\t", "\n"], ["a", "5"]),
     (CharacterTypeKind.NON_WHITESPACE, "\\S", ["a", "5", "-"], [" ", "\n"]),
 ]
@@ -43,7 +43,7 @@ def test_character_type_fixed_length(kind: CharacterTypeKind) -> None:
 
 def test_character_type_stores_kind() -> None:
     """Test that the kind is kept on the instance."""
-    assert CharacterType(CharacterTypeKind.WORD).kind is CharacterTypeKind.WORD
+    assert CharacterType(CharacterTypeKind.WORD_CHARACTER).kind is CharacterTypeKind.WORD_CHARACTER
 
 
 def test_character_type_invalid_kind() -> None:

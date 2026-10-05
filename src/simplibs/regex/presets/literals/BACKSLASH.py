@@ -1,6 +1,6 @@
 from ...elements.Literal import Literal
 
-BACKSLASH_CHAR = Literal("\\")
+BACKSLASH = Literal("\\")
 """Regex expression matching a literal backslash character.
 
 Init Params:
@@ -11,7 +11,7 @@ Pattern:
     itself, not a two-character escape text.
 
 Example:
-    BACKSLASH_CHAR
+    BACKSLASH
     # Matches: the single backslash character
     # Does not match: any other character
 """

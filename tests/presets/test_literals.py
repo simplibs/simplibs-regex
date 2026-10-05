@@ -2,7 +2,7 @@ import pytest
 from simplibs.regex.elements.CharacterClass import CharacterClass
 from simplibs.regex.elements.Literal import Literal
 from simplibs.regex.presets.literals import (
-    TAB, NEWLINE, CARRIAGE_RETURN, FORM_FEED, VERTICAL_TAB, BELL, BACKSLASH_CHAR,
+    TAB, NEWLINE, CARRIAGE_RETURN, FORM_FEED, VERTICAL_TAB, BELL, BACKSLASH,
 )
 from simplibs.regex.testing import assert_pattern
 
@@ -14,7 +14,7 @@ CASES = [
     (FORM_FEED, '\\f', ['\x0c'], [' ']),
     (VERTICAL_TAB, '\\v', ['\x0b'], ['v']),
     (BELL, '\\a', ['\x07'], ['a']),
-    (BACKSLASH_CHAR, '\\\\', ['\\'], ['/', '\\\\']),
+    (BACKSLASH, '\\\\', ['\\'], ['/', '\\\\']),
 ]
 
 
@@ -38,6 +38,6 @@ def test_literals_are_legal_character_class_items(subtests):
         matches=["\t", "\n"], non_matches=["a", " "],
     )
     assert_pattern(
-        subtests, CharacterClass(BACKSLASH_CHAR), "[\\\\]",
+        subtests, CharacterClass(BACKSLASH), "[\\\\]",
         matches=["\\"], non_matches=["/"],
     )

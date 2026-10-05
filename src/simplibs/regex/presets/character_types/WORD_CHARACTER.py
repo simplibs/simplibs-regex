@@ -2,7 +2,7 @@
 from ...elements.CharacterType import CharacterType, CharacterTypeKind
 
 
-WORD = CharacterType(CharacterTypeKind.WORD)
+WORD_CHARACTER = CharacterType(CharacterTypeKind.WORD_CHARACTER)
 """Regex expression matching a word character.
 
 Init Params:
@@ -13,7 +13,7 @@ Pattern:
     flag only `a-z`, `A-Z`, `0-9` and `_`.
 
 Example:
-    WORD
+    WORD_CHARACTER
     # Matches: "a", "Z", "9", "_"
     # Does not match: " ", "-", "!"
 """

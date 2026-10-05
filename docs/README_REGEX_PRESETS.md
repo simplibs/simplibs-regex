@@ -31,14 +31,14 @@ the underlying mechanisms.
 
 [**any_character**: `ANY`](#any_character)
 
-[**character_types**: `DIGIT` · `NON_DIGIT` · `WORD` · `NON_WORD` ·
+[**character_types**: `DIGIT` · `NON_DIGIT` · `WORD_CHARACTER` · `NON_WORD_CHARACTER` ·
 `WHITESPACE` · `NON_WHITESPACE`](#character_types)
 
 [**character_classes**: `LOWERCASE_LETTER` ·
 `UPPERCASE_LETTER` · `LETTER` · `ALPHANUMERIC` · `HEX_DIGIT`](#character_classes)
 
 [**literals**: `TAB` · `NEWLINE` · `CARRIAGE_RETURN` · `FORM_FEED` ·
-`VERTICAL_TAB` · `BELL` · `BACKSLASH_CHAR`](#literals)
+`VERTICAL_TAB` · `BELL` · `BACKSLASH`](#literals)
 
 [**quantifiers**: `OPTIONAL` · `ZERO_OR_MORE` · `ONE_OR_MORE` ·
 `EXACTLY` · `AT_LEAST` · `BETWEEN`](#quantifiers)
@@ -109,14 +109,14 @@ Module-level `CharacterType` instances — see
 Like `re` itself they are Unicode-aware for `str` patterns (`DIGIT` also matches digits of
 other scripts); compile with `Flag.ASCII` to restrict them to ASCII.
 
-| Preset           | Renders |
-|------------------|---------|
-| `DIGIT`          | `\d`    |
-| `NON_DIGIT`      | `\D`    |
-| `WORD`           | `\w`    |
-| `NON_WORD`       | `\W`    |
-| `WHITESPACE`     | `\s`    |
-| `NON_WHITESPACE` | `\S`    |
+| Preset               | Renders |
+|----------------------|---------|
+| `DIGIT`              | `\d`    |
+| `NON_DIGIT`          | `\D`    |
+| `WORD_CHARACTER`     | `\w`    |
+| `NON_WORD_CHARACTER` | `\W`    |
+| `WHITESPACE`         | `\s`    |
+| `NON_WHITESPACE`     | `\S`    |
 
 **Example usage:**
 ```python
@@ -167,7 +167,7 @@ and easy to mistype.
 | `FORM_FEED`       | form feed       |
 | `VERTICAL_TAB`    | vertical tab    |
 | `BELL`            | bell            |
-| `BACKSLASH_CHAR`  | a literal `\`   |
+| `BACKSLASH`  | a literal `\`   |
 
 **Example usage:**
 ```python

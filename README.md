@@ -221,9 +221,9 @@ construction time, not deferred to `re.compile()`.
 
 * **`anchors`**: `START`, `END`, `START_STRING`, `END_STRING`, `WORD_BOUNDARY`, `NON_WORD_BOUNDARY`
 * **`any_character`**: `ANY`
-* **`character_types`**: `DIGIT`, `NON_DIGIT`, `WORD`, `NON_WORD`, `WHITESPACE`, `NON_WHITESPACE`
+* **`character_types`**: `DIGIT`, `NON_DIGIT`, `WORD_CHARACTER`, `NON_WORD_CHARACTER`, `WHITESPACE`, `NON_WHITESPACE`
 * **`character_classes`**: `LOWERCASE_LETTER`, `UPPERCASE_LETTER`, `LETTER`, `ALPHANUMERIC`, `HEX_DIGIT`
-* **`literals`**: `TAB`, `NEWLINE`, `CARRIAGE_RETURN`, `FORM_FEED`, `VERTICAL_TAB`, `BELL`, `BACKSLASH_CHAR`
+* **`literals`**: `TAB`, `NEWLINE`, `CARRIAGE_RETURN`, `FORM_FEED`, `VERTICAL_TAB`, `BELL`, `BACKSLASH`
 * **`quantifiers`**: `OPTIONAL`, `ZERO_OR_MORE`, `ONE_OR_MORE`, `EXACTLY`, `AT_LEAST`, `BETWEEN`
 * **`groups`**: `NAMED_GROUP`, `NON_CAPTURING`, `ATOMIC_GROUP`, `WITH_FLAGS`, `CASE_INSENSITIVE`, `VERBOSE_GROUP`
 * **`lookaround`**: `LOOKAHEAD`, `NEGATIVE_LOOKAHEAD`, `LOOKBEHIND`, `NEGATIVE_LOOKBEHIND`

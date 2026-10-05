@@ -14,9 +14,9 @@ using the regex DSL clean and intuitive.
 | `anchors`           | Zero-width position assertions (`START`, `END`, `WORD_BOUNDARY`, etc.).         |
 | `any_character`     | The `.` wildcard shorthand (`ANY`).                                             |
 | `character_classes` | Common `[...]` compositions (`LETTER`, `ALPHANUMERIC`, `HEX_DIGIT`, etc.).      |
-| `character_types`   | Built-in character class shorthands (`DIGIT`, `WORD`, `WHITESPACE`, etc.).      |
+| `character_types`   | Built-in character class shorthands (`DIGIT`, `WORD_CHARACTER`, `WHITESPACE`, etc.).      |
 | `groups`            | Capturing, non-capturing, named, and atomic grouping helpers.                   |
-| `literals`          | Control-character literals (`TAB`, `NEWLINE`, `BACKSLASH_CHAR`, etc.).          |
+| `literals`          | Control-character literals (`TAB`, `NEWLINE`, `BACKSLASH`, etc.).          |
 | `lookaround`        | Positive and negative lookahead/lookbehind assertions.                          |
 | `quantifiers`       | Repeat wrappers like `OPTIONAL`, `ZERO_OR_MORE`, `BETWEEN`, etc.                |
 """

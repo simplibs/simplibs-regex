@@ -7,8 +7,8 @@ class CharacterTypeKind(Enum):
 
     DIGIT = r"\d"
     NON_DIGIT = r"\D"
-    WORD = r"\w"
-    NON_WORD = r"\W"
+    WORD_CHARACTER = r"\w"
+    NON_WORD_CHARACTER = r"\W"
     WHITESPACE = r"\s"
     NON_WHITESPACE = r"\S"
 
@@ -23,8 +23,8 @@ a `CharacterType` element (such as digits, word characters, or whitespace).
 ## Members
 - `DIGIT`: Matches decimal digits (`\\d`).
 - `NON_DIGIT`: Matches non-digit characters (`\\D`).
-- `WORD`: Matches word characters (`\\w`).
-- `NON_WORD`: Matches non-word characters (`\\W`).
+- `WORD_CHARACTER`: Matches word characters (`\\w`).
+- `NON_WORD_CHARACTER`: Matches non-word characters (`\\W`).
 - `WHITESPACE`: Matches whitespace characters (`\\s`).
 - `NON_WHITESPACE`: Matches non-whitespace characters (`\\S`).
 """

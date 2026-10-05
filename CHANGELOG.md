@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.0] - 2026-10-05
+
+### 🔄 Changed
+
+#### Presets
+
+* Renamed character-related presets to make their names consistent with the
+  terminology used by the `simplibs-patterns` library:
+  * `BACKSLASH_CHAR` → `BACKSLASH`
+  * `WORD` → `WORD_CHARACTER`
+  * `NON_WORD` → `NON_WORD_CHARACTER`
+  
+  `WORD` and `NON_WORD` describe regex character classes, where `WORD` means
+  a word character rather than a complete word. The new names make this
+  distinction explicit and align the low-level regex presets with the
+  higher-level preset definitions in `simplibs-patterns`.
+
+#### Documentation & Testing
+
+* Updated tests and documentation to use the new preset names.
+
+---
+
 ## [0.3.1] - 2026-10-05
 
 ### 🐛 Fixed

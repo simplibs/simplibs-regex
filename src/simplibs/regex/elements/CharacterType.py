@@ -66,7 +66,7 @@ _DESIGN_NOTES = """
 
 ## One class, one enum — same shape as Anchor
 `\\d \\D \\w \\W \\s \\S` collapse into one parameterized class, exactly
-the pattern used for `Anchor`. Presets (`DIGIT`, `NON_DIGIT`, `WORD`,
+the pattern used for `Anchor`. Presets (`DIGIT`, `NON_DIGIT`, `WORD_CHARACTER`,
 ...) are plain instances in `presets/character_types.py`.
 
 ## Why this is the one atom type usable in a CharacterClass unchanged

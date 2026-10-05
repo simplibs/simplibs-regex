@@ -62,9 +62,9 @@ from .presets.any_character.ANY import ANY
 from .presets.character_types.DIGIT import DIGIT
 from .presets.character_types.NON_DIGIT import NON_DIGIT
 from .presets.character_types.NON_WHITESPACE import NON_WHITESPACE
-from .presets.character_types.NON_WORD import NON_WORD
+from .presets.character_types.NON_WORD_CHARACTER import NON_WORD_CHARACTER
 from .presets.character_types.WHITESPACE import WHITESPACE
-from .presets.character_types.WORD import WORD
+from .presets.character_types.WORD_CHARACTER import WORD_CHARACTER
 
 # ======================================================================
 # Presets (Character Classes)
@@ -96,7 +96,7 @@ from .presets.lookaround.NEGATIVE_LOOKBEHIND import NEGATIVE_LOOKBEHIND
 # ======================================================================
 # Presets (Literals)
 # ======================================================================
-from .presets.literals.BACKSLASH_CHAR import BACKSLASH_CHAR
+from .presets.literals.BACKSLASH import BACKSLASH
 from .presets.literals.BELL import BELL
 from .presets.literals.CARRIAGE_RETURN import CARRIAGE_RETURN
 from .presets.literals.FORM_FEED import FORM_FEED
@@ -157,9 +157,9 @@ __all__ = [
     "DIGIT",
     "NON_DIGIT",
     "NON_WHITESPACE",
-    "NON_WORD",
+    "NON_WORD_CHARACTER",
     "WHITESPACE",
-    "WORD",
+    "WORD_CHARACTER",
     # Presets - Character Classes
     "ALPHANUMERIC",
     "HEX_DIGIT",
@@ -179,7 +179,7 @@ __all__ = [
     "NEGATIVE_LOOKAHEAD",
     "NEGATIVE_LOOKBEHIND",
     # Presets - Literals
-    "BACKSLASH_CHAR",
+    "BACKSLASH",
     "BELL",
     "CARRIAGE_RETURN",
     "FORM_FEED",
