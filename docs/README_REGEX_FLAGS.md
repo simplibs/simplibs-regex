@@ -29,15 +29,15 @@ class Flag(Enum):
 
 **Members and inline letters:**
 
-| Member | Letter | `re` module flag |
-|---|---|---|
-| `ASCII` | `a` | `re.ASCII` |
-| `IGNORECASE` | `i` | `re.IGNORECASE` |
-| `LOCALE` | `L` | `re.LOCALE` |
-| `MULTILINE` | `m` | `re.MULTILINE` |
-| `DOTALL` | `s` | `re.DOTALL` |
-| `UNICODE` | `u` | `re.UNICODE` |
-| `VERBOSE` | `x` | `re.VERBOSE` |
+| Member       | Letter | `re` module flag |
+|--------------|--------|------------------|
+| `ASCII`      | `a`    | `re.ASCII`       |
+| `IGNORECASE` | `i`    | `re.IGNORECASE`  |
+| `LOCALE`     | `L`    | `re.LOCALE`      |
+| `MULTILINE`  | `m`    | `re.MULTILINE`   |
+| `DOTALL`     | `s`    | `re.DOTALL`      |
+| `UNICODE`    | `u`    | `re.UNICODE`     |
+| `VERBOSE`    | `x`    | `re.VERBOSE`     |
 
 **Properties:**
 * `.re_flag` (*re.RegexFlag*): The corresponding `re` module flag — used by

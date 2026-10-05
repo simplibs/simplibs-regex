@@ -8,12 +8,12 @@ from simplibs.regex.testing import assert_pattern
 
 
 CASES = [
-    (TAB, '\\\t', ['\t'], ['t', '\\t', ' ']),
-    (NEWLINE, '\\\n', ['\n'], ['n', '\r']),
-    (CARRIAGE_RETURN, '\\\r', ['\r'], ['\n']),
-    (FORM_FEED, '\\\x0c', ['\x0c'], [' ']),
-    (VERTICAL_TAB, '\\\x0b', ['\x0b'], ['v']),
-    (BELL, '\x07', ['\x07'], ['a']),
+    (TAB, '\\t', ['\t'], ['t', '\\t', ' ']),
+    (NEWLINE, '\\n', ['\n'], ['n', '\r']),
+    (CARRIAGE_RETURN, '\\r', ['\r'], ['\n']),
+    (FORM_FEED, '\\f', ['\x0c'], [' ']),
+    (VERTICAL_TAB, '\\v', ['\x0b'], ['v']),
+    (BELL, '\\a', ['\x07'], ['a']),
     (BACKSLASH_CHAR, '\\\\', ['\\'], ['/', '\\\\']),
 ]
 
@@ -26,7 +26,7 @@ def test_literals_presets(subtests, node, expected, matches, non_matches) -> Non
 
 def test_literals_concatenate_with_other_literals(subtests):
     assert_pattern(
-        subtests, Literal("a") + TAB + Literal("b"), "a\\\tb",
+        subtests, Literal("a") + TAB + Literal("b"), "a\\tb",
         matches=["a\tb"], non_matches=["ab", "a b"],
     )
 
@@ -34,7 +34,7 @@ def test_literals_concatenate_with_other_literals(subtests):
 def test_literals_are_legal_character_class_items(subtests):
     """Single-character Literals may appear inside `[...]`; a backslash is escaped there."""
     assert_pattern(
-        subtests, CharacterClass(TAB, NEWLINE), "[\t\n]",
+        subtests, CharacterClass(TAB, NEWLINE), "[\\t\\n]",
         matches=["\t", "\n"], non_matches=["a", " "],
     )
     assert_pattern(

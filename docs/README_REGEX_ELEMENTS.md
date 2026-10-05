@@ -45,7 +45,9 @@ silently compiled into something misleading.
 ### `Literal`
 
 Matches the given text literally, character for character, auto-escaping every
-regex-special character via `re.escape`.
+regex-special character via `re.escape`. Control characters are written as readable
+escapes (`\t`, `\n`, `\r`, `\f`, `\v`, `\a`, other controls as `\xhh`) instead of a
+backslash plus an invisible character; the meaning for `re` is identical.
 
 **Parameters:**
 * `text` (*str*): The literal text. Must be non-empty.
@@ -58,12 +60,17 @@ substring "ab").
 ```python
 Literal("a.b")      # -> "a\.b"     (matches the literal string "a.b")
 Literal(".")         # -> "\."
+Literal("\t")        # -> "\t"      (the two characters backslash, t — matches a tab)
+Literal(" ")         # -> "\ "      (a space stays escaped, which keeps it safe under VERBOSE)
 ```
 
 **Under the hood** *(`to_pattern`)*:
 ```python
 def to_pattern(self) -> str:
-    return re.escape(self.text)
+    return "".join(
+        escape_control_character(char) or re.escape(char)
+        for char in self.text
+    )
 ```
 
 `fixed_length` is always `len(text)`. A multi-character `Literal` also signals
@@ -271,7 +278,8 @@ its own `_usable_in_char_class = True`, so this is rejected by the ordinary item
 check with no special-case code. `fixed_length` is unconditionally `1`.
 
 Inside `[...]`, a `Literal` escapes `] ^ - \` plus `[ & ~ |` — `re` reserves `[[`, `&&`,
-`||`, `~~` and `--` for future set operations and warns about them.
+`||`, `~~` and `--` for future set operations and warns about them. Control characters are
+written the same readable way as outside a class (`[^,\r\n]`, never raw characters).
 
 [▲ Back to top](#-table-of-contents)
 
@@ -318,13 +326,13 @@ syntaxes into one mechanism.
 
 **`CharacterCodeKind` values and ranges:**
 
-| Member | Syntax | Value range |
-|---|---|---|
-| `HEX` | `\xFF` | `0x00`–`0xFF` |
-| `UNICODE_SHORT` | `\uFFFF` | `0x0000`–`0xFFFF` |
-| `UNICODE_LONG` | `\U0010FFFF` | `0x000000`–`0x10FFFF` |
-| `NAMED` | `\N{NAME}` | an official Unicode character name (case-insensitive, aliases accepted) |
-| `OCTAL` | `\ooo` | `0`–`0o377` (verified against `re.compile`; `0o400`+ is rejected) |
+| Member          | Syntax       | Value range                                                             |
+|-----------------|--------------|-------------------------------------------------------------------------|
+| `HEX`           | `\xFF`       | `0x00`–`0xFF`                                                           |
+| `UNICODE_SHORT` | `\uFFFF`     | `0x0000`–`0xFFFF`                                                       |
+| `UNICODE_LONG`  | `\U0010FFFF` | `0x000000`–`0x10FFFF`                                                   |
+| `NAMED`         | `\N{NAME}`   | an official Unicode character name (case-insensitive, aliases accepted) |
+| `OCTAL`         | `\ooo`       | `0`–`0o377` (verified against `re.compile`; `0o400`+ is rejected)       |
 
 **Usable in a `CharacterClass`:** always — all five mean the same thing inside and
 outside `[...]`.

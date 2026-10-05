@@ -206,8 +206,8 @@ give identical source text completely different meanings).
 * `str`: This node's representation for use inside `[...]`. Defaults to
   `to_pattern()` — correct for any node whose escape syntax is genuinely identical
   either side of a class (`CharacterType`, `CharacterCode`). Only `Literal` overrides this
-  (escaping just `] ^ - \`, a smaller set than the general-purpose `re.escape` it
-  uses outside a class).
+  (escaping `] ^ - \` and `[ & ~ |`, and writing control characters as readable escapes, 
+  a smaller set than the general-purpose `re.escape` it uses outside a class).
 
 **Example usage:**
 ```python

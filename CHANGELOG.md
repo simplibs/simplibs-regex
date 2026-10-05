@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] - 2026-10-05
+
+### ✨ Added
+
+#### Testing
+
+* `assert_pattern(finds=...)` — context checks for terms that depend on their surroundings
+  (lookarounds): maps a text to the substring a `search` in it must return, or to `None`
+  when nothing may be found. `fullmatch`, used by `matches` / `non_matches`, cannot express
+  this (`(?<=key=).+` never fully matches `"value"`).
+
+#### Documentation
+
+* `finds` documented in `docs/README_REGEX_TESTING.md` (new "Context checks" section) and
+  mentioned in the root `README.md`
+
+### 🔄 Changed
+
+* `Literal`, `CharacterRange` and character classes — control characters are rendered as
+  readable escapes (`\t \n \r \f \v \a`, other controls `\xhh`) instead of a backslash plus the
+  invisible character (`re.escape`'s output) or, inside `[...]`, the raw character. The pattern
+  string changes (`Literal("\n").to_pattern()` is now `\n`), the matching does not. A space stays
+  `\ `. The `TAB`, `NEWLINE`, `CARRIAGE_RETURN`, `FORM_FEED`, `VERTICAL_TAB` and `BELL` presets
+  render accordingly.
+
+### 📋 Improved
+
+* `assert_pattern` — failure messages show the expected / actual pattern strings with
+  `repr`; patterns with real control characters (e.g. a verbatim `RawPattern("a\nb")`) no
+  longer break the message across lines
+
+---
+
 ## [0.2.0] - 2026-10-02
 
 ### ✨ Added

@@ -237,7 +237,8 @@ construction time, not deferred to `re.compile()`.
 `assert_pattern` — one call verifies the exact pattern string a term renders, the texts
 it must match and the texts it must not. Built for testing presets and for libraries
 built on top of this one (such as `simplibs-patterns`). Not imported by `simplibs.regex`
-itself; import it explicitly.
+itself; import it explicitly. For terms that depend on their surroundings (lookarounds),
+`finds=` checks what a search inside a longer text returns.
 
 ```python
 from simplibs.regex.presets.character_types import DIGIT

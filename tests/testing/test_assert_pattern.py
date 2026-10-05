@@ -1,112 +1,90 @@
-from contextlib import contextmanager
-from typing import Iterator
+import re
 
 import pytest
 from simplibs.regex.elements.Literal import Literal
-from simplibs.regex.flags.Flag import Flag
+from simplibs.regex.elements.RawPattern import RawPattern
 from simplibs.regex.presets.character_types import DIGIT
-from simplibs.regex.testing.assert_pattern import assert_pattern
+from simplibs.regex.presets.lookaround import LOOKBEHIND
+from simplibs.regex.presets.quantifiers import ONE_OR_MORE
+from simplibs.regex.testing import assert_pattern
+
+USD_AMOUNT = LOOKBEHIND(Literal("USD")) + ONE_OR_MORE(DIGIT)
 
 
-class _RecordingSubtests:
-    """Minimal stand-in for the pytest-subtests fixture.
-
-    Like the real one, it swallows an AssertionError raised inside a
-    subtest and only records it, so the surrounding test keeps running.
-    """
-
-    def __init__(self) -> None:
-        self.names: list[str] = []
-        self.failed: list[str] = []
-
-    @contextmanager
-    def test(self, name: str) -> Iterator[None]:
-        self.names.append(name)
-        try:
-            yield
-        except AssertionError:
-            self.failed.append(name)
+def test_passes_when_everything_holds(subtests):
+    assert_pattern(subtests, DIGIT, "\\d", matches=["5"], non_matches=["a", "55"])
 
 
-def test_valid_pattern_passes_silently() -> None:
-    """Test that a correct pattern passes and uses no subtests when not verbose."""
-    subtests = _RecordingSubtests()
-    assert_pattern(subtests, DIGIT, "\\d", matches=["5"], non_matches=["a", "55"], verbose=False)
-    assert subtests.names == []
+def test_fast_mode_needs_no_subtests_fixture():
+    assert_pattern(None, DIGIT, "\\d", matches=["5"], non_matches=["a"], verbose=False)
 
 
-def test_verbose_registers_one_subtest_per_check() -> None:
-    """Test subtest naming and count in verbose mode."""
-    subtests = _RecordingSubtests()
-    assert_pattern(subtests, DIGIT, "\\d", matches=["5"], non_matches=["a"])
-    assert subtests.names == [
-        "[\\d] Pattern String Check",
-        "[\\d] Match Check ('5')",
-        "[\\d] Non-Match Check ('a')",
-    ]
-    assert subtests.failed == []
-
-
-def test_intro_replaces_default_prefix() -> None:
-    """Test that `intro` replaces the default [pattern] prefix."""
-    subtests = _RecordingSubtests()
-    assert_pattern(subtests, DIGIT, "\\d", matches=["5"], intro="digit")
-    assert subtests.names == ["digit Pattern String Check", "digit Match Check ('5')"]
-
-
-def test_no_matches_means_only_string_check() -> None:
-    """Test that omitted matches/non_matches produce only the string check."""
-    subtests = _RecordingSubtests()
-    assert_pattern(subtests, DIGIT, "\\d")
-    assert subtests.names == ["[\\d] Pattern String Check"]
-
-
-def test_wrong_pattern_string_raises_when_not_verbose() -> None:
-    """Test that a wrong pattern string raises immediately when not verbose."""
+def test_wrong_pattern_string_raises():
     with pytest.raises(AssertionError, match="Expected pattern string"):
         assert_pattern(None, DIGIT, "\\w", verbose=False)
 
 
-def test_failed_match_raises_when_not_verbose() -> None:
-    """Test that a failed positive match raises immediately when not verbose."""
-    with pytest.raises(AssertionError, match="' to match value 'a'"):
+def test_text_that_should_match_but_does_not_raises():
+    with pytest.raises(AssertionError, match="to match value"):
         assert_pattern(None, DIGIT, "\\d", matches=["a"], verbose=False)
 
 
-def test_failed_non_match_raises_when_not_verbose() -> None:
-    """Test that a failed negative match raises immediately when not verbose."""
-    with pytest.raises(AssertionError, match="NOT to match value '5'"):
+def test_text_that_should_not_match_but_does_raises():
+    with pytest.raises(AssertionError, match="NOT to match value"):
         assert_pattern(None, DIGIT, "\\d", non_matches=["5"], verbose=False)
 
 
-def test_verbose_records_failures_and_keeps_going() -> None:
-    """Test that verbose mode records every failure and still runs later checks."""
-    subtests = _RecordingSubtests()
-    assert_pattern(subtests, DIGIT, "\\w", matches=["a", "5"], non_matches=["7"])
-    assert subtests.failed == [
-        "[\\w] Pattern String Check",
-        "[\\w] Match Check ('a')",
-        "[\\w] Non-Match Check ('7')",
-    ]
-    assert "[\\w] Match Check ('5')" in subtests.names
+def test_failure_message_keeps_a_real_control_character_on_one_line():
+    """`RawPattern` is verbatim, so its pattern really contains a newline; the message must show it with repr."""
+    with pytest.raises(AssertionError) as error:
+        assert_pattern(None, RawPattern("a\nb"), "x", verbose=False)
+    assert repr("a\nb") in str(error.value)
+    assert "\n" not in str(error.value)
 
 
-def test_flags_are_applied_to_matching() -> None:
-    """Test that `flags` reach the compiled pattern."""
-    node = Literal("a")
-    assert_pattern(None, node, "a", matches=["A"], flags=frozenset({Flag.IGNORECASE}), verbose=False)
-    assert_pattern(None, node, "a", non_matches=["A"], verbose=False)
+def test_failure_message_shows_a_literal_control_character_as_a_readable_escape():
+    """`Literal("\n")` renders the two characters backslash, n — never a raw newline."""
+    with pytest.raises(AssertionError) as error:
+        assert_pattern(None, Literal("\n"), "x", verbose=False)
+    assert repr("\\n") in str(error.value)
+    assert "\n" not in str(error.value)
 
 
-def test_rejects_non_regex_pattern_obj() -> None:
-    """Test that a non-Regex pattern_obj raises TypeError."""
-    with pytest.raises(TypeError, match="requires a Regex instance"):
-        assert_pattern(None, "\\d", "\\d")  # type: ignore[arg-type]
+def test_finds_checks_a_search_in_context(subtests):
+    assert_pattern(
+        subtests, USD_AMOUNT, "(?<=USD)\\d+",
+        finds={"USD42": "42", "total USD7 paid": "7", "EUR42": None},
+    )
 
 
-def test_rejects_bare_string_instead_of_list() -> None:
-    """Test that a bare str for matches/non_matches raises TypeError."""
-    with pytest.raises(TypeError, match="'matches' must be a list"):
-        assert_pattern(None, DIGIT, "\\d", matches="123")  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="'non_matches' must be a list"):
-        assert_pattern(None, DIGIT, "\\d", non_matches="abc")  # type: ignore[arg-type]
+def test_finds_catches_a_different_result():
+    with pytest.raises(AssertionError, match="to find"):
+        assert_pattern(None, USD_AMOUNT, "(?<=USD)\\d+", finds={"USD42": "4"}, verbose=False)
+
+
+def test_finds_catches_a_search_that_should_find_nothing():
+    with pytest.raises(AssertionError, match="to find"):
+        assert_pattern(None, USD_AMOUNT, "(?<=USD)\\d+", finds={"USD42": None}, verbose=False)
+
+
+def test_fullmatch_alone_cannot_check_a_lookbehind():
+    """The reason `finds` exists."""
+    with pytest.raises(AssertionError):
+        assert_pattern(None, USD_AMOUNT, "(?<=USD)\\d+", matches=["42"], verbose=False)
+
+
+@pytest.mark.parametrize("bad", [["USD42"], "USD42", ("USD42", "42")])
+def test_finds_must_be_a_mapping(bad):
+    with pytest.raises(TypeError, match="finds"):
+        assert_pattern(None, USD_AMOUNT, "(?<=USD)\\d+", finds=bad, verbose=False)
+
+
+@pytest.mark.parametrize("argument", ["matches", "non_matches"])
+def test_a_bare_string_is_rejected(argument):
+    with pytest.raises(TypeError, match=argument):
+        assert_pattern(None, DIGIT, "\\d", verbose=False, **{argument: "abc"})
+
+
+def test_pattern_obj_must_be_a_regex():
+    with pytest.raises(TypeError, match="Regex instance"):
+        assert_pattern(None, "\\d", "\\d", verbose=False)

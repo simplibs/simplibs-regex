@@ -10,7 +10,8 @@ from simplibs.regex.testing import assert_pattern
 ```
 
 One call verifies three things about a term: the exact pattern string it renders, the
-texts it must match, and the texts it must not match.
+texts it must match, and the texts it must not match. Terms that only make sense next to
+other text (lookarounds) can also be checked in context with `finds`.
 
 ```python
 def test_digit(subtests):
@@ -22,6 +23,7 @@ def test_digit(subtests):
 ## 🧭 Table of Contents
 
 * [`assert_pattern`](#assert_pattern)
+* [Context checks (`finds`)](#context-checks-finds)
 * [Verbose and fast mode](#verbose-and-fast-mode)
 * [What it does not check](#what-it-does-not-check)
 
@@ -43,6 +45,9 @@ does not match) the given texts.
   match.
 * `non_matches` (*Sequence[str] | None*, keyword-only, default `None`): Texts that must
   NOT fully match.
+* `finds` (*Mapping[str, str | None] | None*, keyword-only, default `None`): Maps a text to the
+  substring a *search* in it must return, or to `None` when nothing may be found — see
+  [Context checks](#context-checks-finds).
 * `flags` (*set[Flag] | frozenset[Flag]*, keyword-only, default `frozenset()`): Top-level flags
   used when compiling, exactly as in `RegexPattern`.
 * `verbose` (*bool*, keyword-only, default `True`): Each check becomes its own subtest
@@ -55,9 +60,10 @@ does not match) the given texts.
 
 **Raises:**
 * `TypeError`: If `pattern_obj` is not a `Regex`, or if `matches` / `non_matches` is a
-  bare `str` (it would be iterated character by character).
+  bare `str` (it would be iterated character by character), or if `finds` is not a mapping.
 * `AssertionError`: If the rendered pattern differs from `expected_pattern`, a text in
-  `matches` does not fully match, or a text in `non_matches` does.
+  `matches` does not fully match, a text in `non_matches` does, or a `finds` search returns
+  something else.
 
 **Example usage:**
 ```python
@@ -125,13 +131,35 @@ subtest, instead of being repeated for every text.
 
 ---
 
+### Context checks (`finds`)
+
+`fullmatch` asks "is this whole text an instance of the term?" — the wrong question for a
+lookbehind or lookahead: `(?<=key=).+` can never fully match `"value"`, because nothing
+precedes it. `finds` asks the right one: *what does a search in this longer text return?*
+
+```python
+assert_pattern(
+    subtests, LOOKBEHIND(Literal("USD")) + ONE_OR_MORE(DIGIT), "(?<=USD)\\d+",
+    finds={"USD42": "42", "EUR42": None},
+)
+```
+
+* The key is the text to search, the value the substring the search must return (the whole
+  match, `group()`).
+* `None` means "nothing may be found".
+* Capture groups are not compared; test those directly through `RegexPattern`.
+
+[▲ Back to top](#-table-of-contents)
+
+---
+
 ### What it does not check
 
 * **Whole texts only.** Matching uses `fullmatch`, so `matches=["2026-09-30"]` passes
   while `"x2026-09-30x"` belongs in `non_matches`.
 * **Zero-width terms.** Anchors and lookarounds consume no characters, so they cannot be
-  meaningfully tested with non-empty texts; for them the pattern-string check is the
-  test.
+  meaningfully tested with non-empty texts; check them in context with `finds`
+  (see above), and rely on the pattern-string check for the rest.
 * **Shape, not truth.** The helper checks what a regex can check — see the notes in
   each term's docstring for what a pattern deliberately leaves out (check digits,
   calendar validity, ...).

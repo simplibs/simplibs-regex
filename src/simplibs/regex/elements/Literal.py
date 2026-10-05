@@ -2,7 +2,7 @@ import re
 # Outers
 from ..base_class import Regex
 # Inners
-from ._helpers import escape_char_class_char
+from ._helpers import escape_char_class_char, escape_control_character
 from ._validations import (
     raise_literal_empty_error,
     raise_literal_not_single_char_error,
@@ -14,11 +14,13 @@ class Literal(Regex):
     """Match the given text literally, character for character.
 
     Pattern:
-        the text, with every regex-special character auto-escaped
+        the text, with every regex-special character auto-escaped and every
+        control character written as a readable escape (`\\t`, `\\n`, ...)
 
     Example:
         Literal("a.b")      # -> "a\\.b" (matches the literal string "a.b")
         Literal("3+3=6")    # -> "3\\+3=6"
+        Literal("\\t")       # -> "\\t"   (the two characters backslash, t)
     """
 
     __slots__ = ("text",)
@@ -59,8 +61,13 @@ class Literal(Regex):
     # ----------------------------------------------------------------------
     def to_pattern(self) -> str:
 
-        # 1. Escape every regex-special character in the literal text.
-        return re.escape(self.text)
+        # 1. Escape character by character: control characters become readable
+        #    escapes (`\\n`, not a backslash plus an invisible newline), everything
+        #    else is escaped by `re.escape` exactly as before.
+        return "".join(
+            escape_control_character(char) or re.escape(char)
+            for char in self.text
+        )
 
     # ----------------------------------------------------------------------
     # Fixed-length introspection
@@ -121,6 +128,15 @@ An empty `Literal` would render as `""` — silently invisible inside a
 it at construction time is consistent with `Contains`'s own non-empty
 substring convention in `simplibs-rules`, and avoids a silent no-op
 node anywhere in a composed tree.
+
+## Why control characters are written as readable escapes
+`re.escape("\\n")` is a backslash followed by an actual newline. It is valid,
+but invisible: pattern strings, error messages and test expectations break
+across lines and cannot be compared by eye. `\\n` means exactly the same to
+`re`, so only the TEXT of the pattern changes, never its behaviour (and
+`fixed_length` still counts the original characters). The rule lives in the
+shared `escape_control_character`, which the character-class escaping reuses.
+A space stays `\\ ` (via `re.escape`), which also keeps it safe under `VERBOSE`.
 
 ## Why escaping happens in `to_pattern`, not at construction time
 `self.text` is kept as the ORIGINAL, unescaped string — useful for any

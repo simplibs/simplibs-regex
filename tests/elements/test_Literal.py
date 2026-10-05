@@ -14,8 +14,26 @@ def test_literal_pattern_is_escaped():
     assert Literal("3+3=6").to_pattern() == "3\\+3=6"
 
 
+@pytest.mark.parametrize(
+    ("char", "escape"),
+    [("\t", "\\t"), ("\n", "\\n"), ("\r", "\\r"), ("\f", "\\f"), ("\v", "\\v"), ("\a", "\\a"),
+     ("\x00", "\\x00"), ("\x08", "\\x08"), ("\x1f", "\\x1f"), ("\x7f", "\\x7f")],
+)
+def test_literal_writes_control_characters_as_readable_escapes(char, escape):
+    """`\\n` instead of a backslash plus an invisible newline; behaviour is identical."""
+    assert Literal(char).to_pattern() == escape
+    assert re.fullmatch(escape, char) is not None
+
+
+def test_literal_keeps_a_space_escaped_and_mixes_text_with_controls():
+    assert Literal(" ").to_pattern() == "\\ "
+    assert Literal("a\tb").to_pattern() == "a\\tb"
+    assert Literal("a.\n").to_pattern() == "a\\.\\n"
+
+
 def test_literal_keeps_the_original_unescaped_text():
     assert Literal("a.b").text == "a.b"
+    assert Literal("\n").text == "\n"
 
 
 @pytest.mark.parametrize("text", TRICKY_TEXTS)
@@ -60,6 +78,7 @@ def test_literal_concatenates_with_plus():
     [
         ("a", "a"), (".", "."), ("+", "+"),                     # not special inside [...]
         ("]", "\\]"), ("^", "\\^"), ("-", "\\-"), ("\\", "\\\\"),
+        ("\t", "\\t"), ("\n", "\\n"), ("\r", "\\r"), ("\x08", "\\x08"),    # control characters stay readable
         ("[", "\\["), ("&", "\\&"), ("~", "\\~"), ("|", "\\|"),  # reserved by `re` for set operations
     ],
 )
