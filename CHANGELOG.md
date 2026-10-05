@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.1] - 2026-10-05
+
+### 🐛 Fixed
+
+* Removed the unused `simplibs-validate` dependency from the package requirements.
+  `simplibs-regex` no longer depends on `simplibs-validate`.
+
+---
+
 ## [0.3.0] - 2026-10-05
 
 ### ✨ Added
