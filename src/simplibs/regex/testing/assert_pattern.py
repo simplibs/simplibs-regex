@@ -124,9 +124,12 @@ hides a wrong match, and vice versa.
 
 ## 2. Why it ships inside the package, not in `tests/`
 `simplibs-patterns` tests import this helper from an installed
-`simplibs-regex`. It deliberately does not import `pytest`: the
-`pytest-subtests` fixture is passed in as the `subtests` argument, so the
-helper adds no test-framework dependency to the library.
+`simplibs-regex`. The helper does not import `pytest` itself: the
+`pytest-subtests` fixture is passed in as the `subtests` argument. Its
+`maybe_subtest` comes from `simplibs.exception.testing`, whose package does
+import `pytest`, so importing this helper needs pytest installed (a test run
+always has it). For the same reason the runtime package of `simplibs-regex`
+must never import `simplibs.regex.testing`.
 
 ## 3. Subtests through `maybe_subtest`
 * `verbose=True`: every check is its own named subtest. A failure is

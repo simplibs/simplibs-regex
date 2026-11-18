@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=69.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplibs-regex"
-version = "0.4.0"
+version = "0.4.1"
 description = "Lightweight, immutable regular expression helper library with lazy compilation and composable pattern utilities for the simplibs ecosystem."
 readme = "README.md"
 license = "MIT"

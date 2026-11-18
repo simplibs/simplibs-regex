@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.1] - 2026-11-17
+
+### 📋 Improved
+
+* **`assert_pattern` design notes**: the claim that the helper adds no test-framework dependency was
+  not literally true. `maybe_subtest` comes from `simplibs.exception.testing`, whose package imports
+  `pytest`, so importing the helper needs pytest installed (a test run always has it). The notes now
+  say so, including the rule that the runtime package of `simplibs-regex` must never import
+  `simplibs.regex.testing`. The code is unchanged.
+
+---
+
 ## [0.4.0] - 2026-10-05
 
 ### 🔄 Changed
